@@ -115,6 +115,7 @@ class QccSpider():
 
     @retry(delay=2, exceptions=True, max_retries=5)
     def cparse(self, url, tags, headers):
+        qcc_conn = pymysql_connection()
         keyid = re.findall('firm/(.*?)\.html', url)
         keyid = keyid[0] if keyid else keyid
         item = {}
@@ -166,8 +167,11 @@ class QccSpider():
         sql_key = ','.join(sql_key_list)
         sql_value_list = ['"' + i + '"' for i in sql_value_list]
         sql_value = ','.join(sql_value_list)
-        print(sql_key)
-        print(sql_value)
+
+        """数据入库"""
+        qcc_conn.qcc_insert(sql_key, sql_value)
+
+
         """股权穿透图"""
         getcookie = self.get_hmac(keyno=keyid)
         sonheader = copy.deepcopy(self.headers_data)

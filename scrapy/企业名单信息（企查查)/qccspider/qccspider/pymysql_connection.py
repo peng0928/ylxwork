@@ -17,10 +17,14 @@ class pymysql_connection():
         self.cursor = self.conn.cursor()
         # self.conn_redis = redis_conn()
 
-    def qcc_insert(self, item):
+    def qcc_insert(self, key, value):
         qccdata_table = 'buy_business_qccdata'
         qcc_business_table = 'buy_business_qccshareholdes'
-        data_insert_sql = 'insert into %s (%s) values (%s)'
+        data_insert_sql = 'insert into %s (%s) values (%s)' % (qccdata_table, key, value)
+        self.cursor.execute(data_insert_sql)
+        insert_id = self.conn.insert_id()
+        print(data_insert_sql, insert_id)
+        self.conn.commit()
 
 
 
