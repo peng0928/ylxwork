@@ -157,6 +157,12 @@ class QccSpider():
         item['网站链接'] = url
         item['企业标签'] = tags
 
+        qcc_item = {}
+        for k,v in item.items():
+            qcc_key = self.qcc_item_dict.get(k)
+            qcc_item[qcc_key] = v
+
+        print(qcc_item)
         """股权穿透图"""
         getcookie = self.get_hmac(keyno=keyid)
         sonheader = copy.deepcopy(self.headers_data)
