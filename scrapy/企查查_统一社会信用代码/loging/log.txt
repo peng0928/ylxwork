@@ -1,0 +1,23 @@
+2022-11-07 16:03:47,435 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=深圳市福田区妇幼保健院, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:03:57,512 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=白城市洮北区岭下镇新建村村民委员会, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:03:58,618 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=深圳市儿童医院, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:04:44,149 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=深圳市福田区妇幼保健院, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:04:47,889 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=辽宁省朝阳市朝阳县二十家子镇二十家子村村民委员会, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:05:27,282 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=白城市洮北区东胜乡庆生村村民委员会, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:05:31,779 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=辽宁省朝阳市朝阳县二十家子镇二十家子村村民委员会, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:05:42,282 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=深圳市儿童医院, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:07:20,576 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=白城市洮北区东胜乡庆生村村民委员会, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:08:32,491 - __main__ - INFO - Status: False, Status_code: 412, url: https://www.qcc.com/web/search?key=深圳市福田区妇幼保健院, msg: <title>用户验证 - 企查查</title>
+2022-11-07 16:11:28,781 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=深圳市福田区妇幼保健院, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:11:31,026 - __main__ - INFO - 信用代码未匹配成功:名称 白城市洮北区东胜乡庆生村村民委员会; id: 421; social_credit_code: 54220802ME1985447M
+2022-11-07 16:11:31,027 - __main__ - INFO - Not Found:名称 白城市洮北区东胜乡庆生村村民委员会; id: 421; url: https://www.qcc.com/web/search?key=白城市洮北区东胜乡庆生村村民委员会
+2022-11-07 16:13:10,802 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=深圳市福田区妇幼保健院, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:13:12,179 - __main__ - INFO - 信用代码未匹配成功:名称 辽宁省朝阳市朝阳县二十家子镇二十家子村村民委员会; id: 542; social_credit_code: 54211321ME00695278
+2022-11-07 16:13:12,180 - __main__ - INFO - Not Found:名称 辽宁省朝阳市朝阳县二十家子镇二十家子村村民委员会; id: 542; url: https://www.qcc.com/web/search?key=辽宁省朝阳市朝阳县二十家子镇二十家子村村民委员会
+2022-11-07 16:13:13,493 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=白城市洮北区岭下镇新建村村民委员会, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:13:16,495 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=深圳市儿童医院, msg: <title>会员登录 - 企查查</title>
+2022-11-07 16:13:58,449 - __main__ - INFO - 信用代码未匹配成功:名称 白城市洮北区岭下镇新建村村民委员会; id: 633; social_credit_code: 54220802ME198433XU
+2022-11-07 16:13:58,450 - __main__ - INFO - Not Found:名称 白城市洮北区岭下镇新建村村民委员会; id: 633; url: https://www.qcc.com/web/search?key=白城市洮北区岭下镇新建村村民委员会
+2022-11-07 16:14:05,544 - __main__ - INFO - 信用代码未匹配成功:名称 深圳市儿童医院; id: 686; social_credit_code: 144030000275
+2022-11-07 16:14:18,042 - __main__ - INFO - 信用代码未匹配成功:名称 深圳市福田区妇幼保健院; id: 247; social_credit_code: 144030400059
+2022-11-07 16:14:18,043 - __main__ - INFO - Not Found:名称 深圳市福田区妇幼保健院; id: 247; url: https://www.qcc.com/web/search?key=深圳市福田区妇幼保健院

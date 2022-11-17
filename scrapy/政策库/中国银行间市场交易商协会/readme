@@ -1,0 +1,4 @@
+nafmiiSpider.py     爬虫运行文件
+redis_conn.py      redis数据库配置
+pymysql_connnection.py      MYSQL数据库配置
+data_process.py     工具类
