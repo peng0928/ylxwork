@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2022-10-26 17:13
 # @Author  : chenxuepeng
-import logging, json
-import xlrd
-import os, sys
+import json
+import logging
+import os
 import re
+
 import requests
+import xlrd
 from lxml import etree
 
-from pymysql_connection import *
-from useragent import *
 from decorator_penr import *
 from qcc_hmac import *
+from useragent import *
+from qccspider.pymysql_connection import *
 
 
 class QccSpider():
@@ -56,7 +58,7 @@ class QccSpider():
             "Referer": "https://www.qcc.com/web/search?key=",
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "cookie": self.open_cookie()
+            "cookie": self.get_cookie()
         }
 
         """股权穿透图-headers"""
@@ -168,6 +170,8 @@ class QccSpider():
         sql_value_list = ['"' + i + '"' for i in sql_value_list]
         sql_value = ','.join(sql_value_list)
 
+        print(sql_key)
+        print(sql_value)
         """数据入库"""
         qcc_conn.qcc_insert(sql_key, sql_value)
 

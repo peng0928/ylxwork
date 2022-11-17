@@ -1,8 +1,13 @@
-import re, time, requests, json, datetime
-from dateutil.relativedelta import relativedelta
-from lxml import etree
-from fake_useragent import UserAgent
+import datetime
+import json
+import re
+import requests
+import time
 from urllib.parse import urljoin
+
+from dateutil.relativedelta import relativedelta
+from fake_useragent import UserAgent
+from lxml import etree
 
 
 class Xpath():

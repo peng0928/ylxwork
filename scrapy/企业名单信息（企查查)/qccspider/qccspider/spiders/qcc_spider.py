@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2022-11-15 15:57
 # @Author  : chenxuepeng
-import scrapy, requests, re
-from ..useragent import *
-from ..data_process import *
+import scrapy
 
 
 class QccSpider(scrapy.Spider):

@@ -1,6 +1,7 @@
-import copy
+import json
+import re
+import requests
 
-import redis, requests, re, json
 from useragent import get_ua
 
 

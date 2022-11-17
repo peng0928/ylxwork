@@ -1,5 +1,4 @@
-import pymysql, copy
-from pymysql.converters import escape_string
+import pymysql
 
 
 class pymysql_connection():
