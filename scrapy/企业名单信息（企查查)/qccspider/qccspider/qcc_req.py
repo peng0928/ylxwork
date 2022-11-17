@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2022-10-26 17:13
 # @Author  : chenxuepeng
+import copy
 import json
 import logging
 import os
@@ -68,7 +69,7 @@ class QccSpider():
             'user-agent': get_ua(),
         }
 
-    @retry(delay=5, exceptions=True, max_retries=5)
+    @retry(delay=2, exceptions=True, max_retries=5)
     def start_request(self, search_key):
         '''数据查询去重-去除重复采购单位'''
         headers = self.headers
@@ -121,8 +122,6 @@ class QccSpider():
         keyid = re.findall('firm/(.*?)\.html', url)
         keyid = keyid[0] if keyid else keyid
         item = {}
-        qcc_value_list = []
-        qcc_key_list = []
 
         response = requests.get(url, headers=headers, proxies={'https': 'tps163.kdlapi.com:15818'})
         if str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
@@ -170,12 +169,6 @@ class QccSpider():
         sql_value_list = ['"' + i + '"' for i in sql_value_list]
         sql_value = ','.join(sql_value_list)
 
-        print(sql_key)
-        print(sql_value)
-        """数据入库"""
-        qcc_conn.qcc_insert(sql_key, sql_value)
-
-
         """股权穿透图"""
         getcookie = self.get_hmac(keyno=keyid)
         sonheader = copy.deepcopy(self.headers_data)
@@ -191,6 +184,9 @@ class QccSpider():
         fatherurl = 'https://www.qcc.com/api/charts/getOwnershipStructureMix'
         fatherresult = self.getOwnershipStructureMix(url=fatherurl, headers=fatherheader, data=fatherdata)
         print('获取到股权穿透图-父级:', fatherresult)
+
+        """数据入库"""
+        qcc_conn.qcc_insert(sql_key, sql_value, sonresult, fatherresult)
         time.sleep(5)
 
     def log(self):
