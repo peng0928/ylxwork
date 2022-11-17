@@ -157,12 +157,17 @@ class QccSpider():
         item['网站链接'] = url
         item['企业标签'] = tags
 
-        qcc_item = {}
+        sql_key_list = []
+        sql_value_list = []
         for k,v in item.items():
-            qcc_key = self.qcc_item_dict.get(k)
-            qcc_item[qcc_key] = v
+            sql_key_list.append(self.qcc_item_dict.get(k))
+            sql_value_list.append(v)
 
-        print(qcc_item)
+        sql_key = ','.join(sql_key_list)
+        sql_value_list = ['"' + i + '"' for i in sql_value_list]
+        sql_value = ','.join(sql_value_list)
+        print(sql_key)
+        print(sql_value)
         """股权穿透图"""
         getcookie = self.get_hmac(keyno=keyid)
         sonheader = copy.deepcopy(self.headers_data)
