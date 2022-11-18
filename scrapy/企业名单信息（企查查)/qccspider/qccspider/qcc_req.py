@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import re
-
+import opencc
 import requests
 import xlrd
 from lxml import etree
@@ -69,15 +69,15 @@ class QccSpider():
 
         self.redis_conn = redis_conn()
 
-    @retry(delay=2, exceptions=True, max_retries=10)
+    @retry(exceptions=True, max_retries=30)
     def start_request(self, search_key):
         '''数据查询去重-去除重复采购单位'''
         headers = self.headers
         headers.update({"cookie": self.open_cookie()})
         condition = True  # False：在企查查中匹配到数据; Ture:在企查查未匹配到数据
         search_id = 1
-        # search_key = '中国石油天然气股份有限公司吐哈油田分公司'
-        search_key = search_key
+        # search_key = '中国融通资产管理集团有限公司'
+        search_key = search_key.replace(' ', '')
         print('当前: ', search_key)
         search_redis = self.redis_conn.find_data(field='qcc', value=search_key)
         if search_redis:
@@ -99,8 +99,11 @@ class QccSpider():
                 maininfo = tree.xpath("//div[@class='maininfo']")
                 for item in maininfo:
                     if condition is True:
-                        company_name = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']//text()")
-                        company_name = ''.join(company_name)
+                        company_names = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']//text()")
+                        company_names = ''.join(company_names)
+                        cc = opencc.OpenCC('t2s')
+                        company_name = cc.convert(company_names.replace('（','(').replace('）',')'))
+                        print(company_name, search_key)
                         if company_name == search_key:
                             curl = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']/@href")[0]
                             tags = item.xpath(".//span[@class='search-tags']/span[@class='m-r-sm']/span/text()")
@@ -119,12 +122,13 @@ class QccSpider():
                 '''企查查未找到'''
                 if condition is True:
                     print('Not Found')
-                    self.logger.info(f'Not Found:名称 {search_key}; id: {search_id}; url: {search_url}')
+                    self.logger.info(f'Not Found:名称 {search_key}')
 
-    @retry(delay=1, exceptions=True, max_retries=15)
+    @retry(delay=1, exceptions=True, max_retries=10)
     def cparse(self, url, tags, search_key):
         headers = self.headers
         headers.update({"cookie": self.open_cookie()})
+        print(headers['cookie'])
         qcc_conn = pymysql_connection()
         keyid = re.findall('firm/(.*?)\.html', url)
         keyid = keyid[0] if keyid else keyid
@@ -227,9 +231,16 @@ class QccSpider():
         print('获取cookie成功:', cookie)
         return cookie
 
+    def save_cookie(self):
+        with open('./config.json', 'r')as f:
+            r = json.loads(f.read())
+        r.update({'cookie': self.get_cookie()})
+        with open('./config.json', 'w')as f:
+            f.write(json.dumps(r, ensure_ascii=False))
+
     def open_cookie(self, type='cookie'):
         if self.i % 5 == 1:
-            self.get_cookie()
+            self.save_cookie()
         with open('./config.json', 'r')as f:
             r = json.loads(f.read())
         self.i += 1
@@ -285,7 +296,7 @@ class QccSpider():
                         item['shouldcapi'] = shouldcapi
                         item['org'] = 0
                         item_list.append(item)
-                        return item_list
+                    return item_list
                 else:
                     input('数据获取失败')
                     raise ValueError('数据获取失败')
@@ -293,12 +304,16 @@ class QccSpider():
     @retry(delay=2, exceptions=True, max_retries=5)
     def getOwnershipStructureMix(self, url, data, keyid):
         getcookie = self.get_hmac(keyno=keyid)
-        fheader = copy.deepcopy(self.headers_data)
+        fheader = {
+            "content-type": "application/json",
+            "cookie": self.open_cookie('cookie_data'),
+            'user-agent': get_ua(),
+        }
         fheader.update(getcookie[1])
         item_list = []
         response = requests.post(url=url, headers=fheader, data=data)
         response.encoding = 'utf-8'
-        print(f'正在获取股权穿透图-父集{response.status_code}:', fheader['cookie'])
+        print(f'正在获取股权穿透图-父集{response.status_code}:', response.text)
 
         """判断为空"""
         if response.status_code == 404:
@@ -306,7 +321,7 @@ class QccSpider():
         else:
             Result = response.json().get('structure')
             Status = response.json().get('Status')
-            if Status == 201  or response.encoding == 404:
+            if Status == 201 or response.encoding == 404 or Result is None:
                 return []
             else:
                 if Result:
@@ -332,7 +347,7 @@ class QccSpider():
                         item['stocktype'] = stocktype
                         item['org'] = 2
                         item_list.append(item)
-                        return item_list
+                    return item_list
                 else:
                     input('数据获取失败')
                     raise ValueError('数据获取失败')
@@ -376,6 +391,6 @@ class QccXls:
 
 if __name__ == '__main__':
     q = QccSpider()
-    x = QccXls().get_xls_data2()
+    x = QccXls().get_xls_data()
     for name in x:
         q.start_request(name)
