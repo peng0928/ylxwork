@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    {% block title %}
+        <title>Title</title>
+    {% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+
+</head>
+<body>
+<div class="container">
+    <nav style="padding-top: 2%">
+        <ul class="nav nav-tabs">
+            <li role="presentation" class="active"><a href="#">首页</a></li>
+            <li role="presentation"><a href="#">任务列表</a></li>
+        </ul>
+    </nav>
+    {% block content %}
+    {% endblock %}
+</div>
+
+{% block js %}
+{% endblock %}
+</body>
+</html>

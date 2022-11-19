@@ -1,0 +1,74 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="HtmlUnknownAttribute" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myValues">
+        <value>
+          <list size="2">
+            <item index="0" class="java.lang.String" itemvalue="job" />
+            <item index="1" class="java.lang.String" itemvalue="task_id" />
+          </list>
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
+    <inspection_tool class="HtmlUnknownTag" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myValues">
+        <value>
+          <list size="18">
+            <item index="0" class="java.lang.String" itemvalue="nobr" />
+            <item index="1" class="java.lang.String" itemvalue="noembed" />
+            <item index="2" class="java.lang.String" itemvalue="comment" />
+            <item index="3" class="java.lang.String" itemvalue="noscript" />
+            <item index="4" class="java.lang.String" itemvalue="embed" />
+            <item index="5" class="java.lang.String" itemvalue="script" />
+            <item index="6" class="java.lang.String" itemvalue="el-button" />
+            <item index="7" class="java.lang.String" itemvalue="b-navbar-item" />
+            <item index="8" class="java.lang.String" itemvalue="button-counter" />
+            <item index="9" class="java.lang.String" itemvalue="b-modal" />
+            <item index="10" class="java.lang.String" itemvalue="b-button" />
+            <item index="11" class="java.lang.String" itemvalue="b-collapse" />
+            <item index="12" class="java.lang.String" itemvalue="b-checkbox" />
+            <item index="13" class="java.lang.String" itemvalue="b-field" />
+            <item index="14" class="java.lang.String" itemvalue="b-input" />
+            <item index="15" class="java.lang.String" itemvalue="el-dialog" />
+            <item index="16" class="java.lang.String" itemvalue="b-switch" />
+            <item index="17" class="java.lang.String" itemvalue="b-numberinput" />
+          </list>
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="9">
+            <item index="0" class="java.lang.String" itemvalue="tensorflow" />
+            <item index="1" class="java.lang.String" itemvalue="matplotlib" />
+            <item index="2" class="java.lang.String" itemvalue="numpy" />
+            <item index="3" class="java.lang.String" itemvalue="Pillow" />
+            <item index="4" class="java.lang.String" itemvalue="rsa" />
+            <item index="5" class="java.lang.String" itemvalue="requests" />
+            <item index="6" class="java.lang.String" itemvalue="urllib3" />
+            <item index="7" class="java.lang.String" itemvalue="crypto" />
+            <item index="8" class="java.lang.String" itemvalue="Flask" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="dict.*" />
+          <option value="list.*" />
+          <option value="MKapp01.views.spiderlist.chart_data.*" />
+          <option value="nets.nets_factory.*" />
+          <option value="tensorflow.*" />
+          <option value="datetime.datetime.*" />
+          <option value="str.*" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

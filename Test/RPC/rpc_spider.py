@@ -3,14 +3,16 @@
 # @Author  : chenxuepeng
 import requests, time, os
 from selenium import webdriver
-from useragent import get_ua
+from .useragent import get_ua
 
 
 class RpcSpider(object):
 
-    def __init__(self):
+    def __init__(self, url: str = None):
+        """
+
+        """
         pid = self.get_os_id()
-        print(pid)
         option = webdriver.ChromeOptions()
         option.add_argument('--headless')
         option.add_argument('--disable-gpu')  # 不需要GPU加速
@@ -49,7 +51,7 @@ class RpcSpider(object):
         os.system(cmd)
         print(pid, 'killed')
 
-    def __del__(self):
+    def close(self):
         self.driver.close()
 
 

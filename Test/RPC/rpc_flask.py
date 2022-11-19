@@ -9,14 +9,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return '1'
-
-
-@app.route('/add')
-def add():
-    # print(os.getcwd())
-    os.system('python rpc_spider.py')
-    return 'Ok'
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
