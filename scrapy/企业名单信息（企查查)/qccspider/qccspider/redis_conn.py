@@ -27,5 +27,5 @@ class redis_conn():
 
 if __name__ == '__main__':
     r = redis_conn()
-    s = r.find_data(value='http://a.xjbt.gov.cn/TPFront/infodetail/?infoid=b543edb3-7ebc-41bb-8610-23dced1c0c75&CategoryNum=004001002')
-    print(s)
+    # s = r.find_data(value='http://a.xjbt.gov.cn/TPFront/infodetail/?infoid=b543edb3-7ebc-41bb-8610-23dced1c0c75&CategoryNum=004001002')
+    r.del_data(field='qcc', value='中国兵器装备集团有限公司')
