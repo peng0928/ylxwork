@@ -1,0 +1,28 @@
+{% extends 'bootstrap_html.html' %}
+{% block content %}
+    <div class="form-group has-success" style="padding-top: 13%">
+        <label class="control-label" for="inputSuccess1">请输入网站:</label>
+        <input type="text" class="form-control" id="url_input" aria-describedby="helpBlock2">
+    </div>
+    <div style="text-align: center; padding-top: 8%">
+        <button type="button" style="text-align: center" class="btn btn-success" id="bigin_btn">RPC开始</button>
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script>
+        $('#bigin_btn').click(function () {
+            var text = $('#url_input').val();
+            var obj = {'status': 'success', 'data': text}
+            $.ajax({
+                url: 'http://127.0.0.1:8088/task/add',
+                type: "post",
+                data: obj,
+                success: function (result) {
+                    alert('1')
+                }
+            });
+
+        })
+    </script>
+{% endblock %}
