@@ -2,11 +2,15 @@
 {% block content %}
     <div class="bs-example" data-example-id="simple-table">
         <table class="table">
-            <caption>RPC任务列表</caption>
+            <caption>RPC任务列表
+                <a href="#"><span class="label label-primary">未启动</span></a>
+                <a href="#"><span class="label label-success">正在启动</span></a>
+            </caption>
             <thead>
             <tr>
                 <th>id</th>
                 <th>任务名称</th>
+                <th>任务id</th>
                 <th>开始时间</th>
                 <th>结束时间</th>
                 <th>状态</th>
@@ -14,25 +18,34 @@
             </tr>
             </thead>
             <tbody>
-            <tr>
-                <th scope="row">1</th>
-                <td>Mark</td>
-                <td>Otto</td>
-                <td>@mdo</td>
-            </tr>
-            <tr>
-                <th scope="row">2</th>
-                <td>Jacob</td>
-                <td>Thornton</td>
-                <td>@fat</td>
-            </tr>
-            <tr>
-                <th scope="row">3</th>
-                <td>Larry</td>
-                <td>the Bird</td>
-                <td>@twitter</td>
-            </tr>
+            {% for query in queryset %}
+                <tr>
+                    <th scope="row">1</th>
+                    <td>{{ query.task_name }}</td>
+                    <td>{{ query.task_uuid }}</td>
+                    <td>{{ query.start_time }}</td>
+                    <td>{{ query.end_time }}</td>
+                    <td>{{ query.get_status_display }}</td>
+                    <td>
+                        <!-- Standard button -->
+                        <button type="button" class="btn btn-default btn-xs" run_id="{{ query.id }}" id="btnrun">运行
+                        </button>
+
+                        <!-- Provides extra visual weight and identifies the primary action in a set of buttons -->
+                        <button type="button" class="btn btn-primary btn-xs" stop_id="{{ query.id }}">停止</button>
+                        <button type="button" class="btn btn-info btn-xs" reset_id="{{ query.id }}">重启</button>
+
+                    </td>
+                </tr>
+            {% endfor %}
             </tbody>
         </table>
     </div>
+{% endblock %}
+{% block js %}
+    <script type="text/javascript">
+
+
+    </script>
+
 {% endblock %}

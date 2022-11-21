@@ -21,6 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index),
     path('task/list', views.task_list),
-    path('task/add', views.task_add),
-
+    path('task/run', views.task_run),
 ]
