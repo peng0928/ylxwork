@@ -1,3 +1,4 @@
+import json
 import re
 import uuid
 from django.core.exceptions import ValidationError
@@ -6,8 +7,11 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from app.models import *
 from django import forms
+from concurrent.futures import ThreadPoolExecutor
+from app.tool.rpc_spider import RpcSpider
 
-
+"""处理器"""
+executor = ThreadPoolExecutor(20)
 # Create your views here.
 
 # url 表单验证器
@@ -55,5 +59,24 @@ def task_list(request):
     queryset = Task.objects.all()
     return render(request, 'task_list.html', {"queryset": queryset})
 
+@csrf_exempt
 def task_run(request):
-    pass
+    if request.method == 'POST':
+        task_id = request.POST.get('id')
+        json_data = {
+            "status": True,
+            "task_id": task_id,
+            'data': 'task running...'
+        }
+        task_obj = Task.objects.filter(id=task_id).first()
+        print(task_obj.task_name)
+        # executor.submit(rpc_task, 'hello', 123)
+        return JsonResponse(json_data)
+
+
+
+# 耗时任务
+def rpc_task(arg1, arg2):
+    print("args: %s %s!" % (arg1, arg2))
+    RpcSpider().open_selenium()
+    print("Task is done!")

@@ -3,7 +3,7 @@
 # @Author  : chenxuepeng
 import requests, time, os
 from selenium import webdriver
-from .useragent import get_ua
+from Test.RPC.useragent import get_ua
 
 
 class RpcSpider(object):
@@ -13,6 +13,8 @@ class RpcSpider(object):
 
         """
         pid = self.get_os_id()
+        start_cookie = []
+        start_cookie_dict = {}
         option = webdriver.ChromeOptions()
         option.add_argument('--headless')
         option.add_argument('--disable-gpu')  # 不需要GPU加速
@@ -22,14 +24,17 @@ class RpcSpider(object):
         option.add_argument("disable-blink-features")
         option.add_argument("disable-blink-features=AutomationControlled")
         self.driver = webdriver.Chrome(options=option)
-        check_url = 'https://www.nmpa.gov.cn/'
+        check_url = url
         print('正在访问:', check_url)
         self.driver.get(check_url)
         time.sleep(2)
         cookie = self.driver.get_cookies()
         for c in cookie:
-            print(c.get('name', None), c.get('value', None))
-        print('成功访问:', check_url)
+            key, value = c.get('name', None), c.get('value', None)
+            start_cookie.append(key + '=' + value)
+        start_cookie = '; '.join(start_cookie)
+        start_cookie_dict['startcookie'] = start_cookie
+        print('成功访问:', check_url, start_cookie_dict)
         while True:
             self.open_selenium()
             time.sleep(5)
@@ -56,4 +61,4 @@ class RpcSpider(object):
 
 
 if __name__ == '__main__':
-    r = RpcSpider()
+    r = RpcSpider(url='https://www.runoob.com/')

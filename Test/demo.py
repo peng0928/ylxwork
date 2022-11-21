@@ -1,7 +1,6 @@
 from flask import Flask
-from time import sleep
 from concurrent.futures import ThreadPoolExecutor
-from RPC.rpc_spider import *
+from app.tool.rpc_spider import *
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 # 创建线程池执行器
 executor = ThreadPoolExecutor(20)
