@@ -69,10 +69,11 @@ class QccSpider():
 
         self.redis_conn = redis_conn()
 
-    @retry(exceptions=True, max_retries=30)
+    @retry(exceptions=True, max_retries=10)
     def start_request(self, search_key):
         '''数据查询去重-去除重复采购单位'''
-        headers = self.headers
+        headers = {}
+        headers.update({"User-Agent": get_ua()})
         headers.update({"cookie": self.open_cookie()})
         condition = True  # False：在企查查中匹配到数据; Ture:在企查查未匹配到数据
         search_id = 1
@@ -89,8 +90,8 @@ class QccSpider():
             '''状态码判断'''
             if str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
                 error_msg = re.findall('(<title>.*?</title>)', response.text)[0]
-                loginfo = f'Status: False, Status_code: {response.status_code}, url: {search_url}, msg: {error_msg}'
-                self.logger.info(loginfo)
+                # loginfo = f'Status: False, Status_code: {response.status_code}, url: {search_url}, msg: {error_msg}'
+                # self.logger.info(loginfo)
                 raise ValueError('异常请求, 请求失败===>>>', search_url)
 
             else:
@@ -102,7 +103,7 @@ class QccSpider():
                         company_names = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']//text()")
                         company_names = ''.join(company_names)
                         cc = opencc.OpenCC('t2s')
-                        company_name = cc.convert(company_names.replace('（','(').replace('）',')'))
+                        company_name = cc.convert(company_names.replace('（', '(').replace('）', ')'))
                         print(company_name, search_key)
                         if company_name == search_key:
                             curl = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']/@href")[0]
@@ -124,11 +125,12 @@ class QccSpider():
                     print('Not Found')
                     self.logger.info(f'Not Found:名称 {search_key}')
 
-    @retry(delay=1, exceptions=True, max_retries=10)
+    @retry(exceptions=True, max_retries=10)
     def cparse(self, url, tags, search_key):
-        headers = self.headers
+        headers = {}
+        headers.update({"User-Agent": get_ua()})
         headers.update({"cookie": self.open_cookie()})
-        print(headers['cookie'])
+        print(headers)
         qcc_conn = pymysql_connection()
         keyid = re.findall('firm/(.*?)\.html', url)
         keyid = keyid[0] if keyid else keyid
@@ -147,7 +149,8 @@ class QccSpider():
             qcc_value = i.xpath("./td[2]|./td[4]|./td[6]")
 
             for v in qcc_value:
-                v_text = v.xpath(".//a[@class='text-dk copy-value']/text()|.//span[@class='cont']/span/span/a/text()|.//span[@class='copy-value']/text()")
+                v_text = v.xpath(
+                    ".//a[@class='text-dk copy-value']/text()|.//span[@class='cont']/span/span/a/text()|.//span[@class='copy-value']/text()")
                 if v_text:
                     value_list.append(v_text[0].strip())
                 else:
@@ -173,7 +176,7 @@ class QccSpider():
         sql_value_list = []
         item['search_name'] = search_key
 
-        for k,v in item.items():
+        for k, v in item.items():
             ak = self.qcc_item_dict.get(k)
             if ak and v:
                 sql_key_list.append(ak)
@@ -185,21 +188,25 @@ class QccSpider():
         """工商数据"""
         print('获取到工商数据:', sql_key, sql_value)
 
-        """股权穿透图"""
-        sondata = '{"keyNo": "%s"}' % keyid
-        sonurl = 'https://www.qcc.com/api/charts/getEquityInvestment'
-        sonresult = self.getEquityInvestment(url=sonurl, data=sondata, keyid=keyid)
-        print('获取到股权穿透图-子级:', sonresult)
+        qcc_text = resp.xpath("//div[@class='text']//text()")
+        qcc_text = ''.join(qcc_text)
+        print(qcc_text)
+        if '股权穿透图' in qcc_text:
+            """股权穿透图"""
+            sondata = '{"keyNo": "%s"}' % keyid
+            sonurl = 'https://www.qcc.com/api/charts/getEquityInvestment'
+            sonresult = self.getEquityInvestment(url=sonurl, data=sondata, keyid=keyid)
+            print('获取到股权穿透图-子级:', sonresult)
 
-        fatherdata = '{"keyNo": "%s","level":1}' % keyid
-        fatherurl = 'https://www.qcc.com/api/charts/getOwnershipStructureMix'
-        fatherresult = self.getOwnershipStructureMix(url=fatherurl, data=fatherdata, keyid=keyid)
-        print('获取到股权穿透图-父级:', fatherresult)
+            fatherdata = '{"keyNo": "%s","level":1}' % keyid
+            fatherurl = 'https://www.qcc.com/api/charts/getOwnershipStructureMix'
+            fatherresult = self.getOwnershipStructureMix(url=fatherurl, data=fatherdata, keyid=keyid)
+            print('获取到股权穿透图-父级:', fatherresult)
 
-        """数据入库"""
-        qcc_conn.qcc_insert(sql_key, sql_value, sonresult, fatherresult, search_key)
-        qcc_conn.close()
-        time.sleep(5)
+            """数据入库"""
+            qcc_conn.qcc_insert(sql_key, sql_value, sonresult, fatherresult, search_key)
+            qcc_conn.close()
+            time.sleep(2)
 
     def log(self):
         os.makedirs('./loging', exist_ok=True)
@@ -212,7 +219,7 @@ class QccSpider():
         logger.addHandler(handler)
         return logger
 
-    @retry()
+    @retry(max_retries=10)
     def get_cookie(self):
         url = 'https://www.qcc.com/ '
         headers = {
@@ -228,8 +235,11 @@ class QccSpider():
         get_keys = re.findall('(acw_tc|QCCSESSID)(.*?);', Set_Cookie)
         cookies = [''.join(i) for i in get_keys]
         cookie = '; '.join(cookies)
-        print('获取cookie成功:', cookie)
-        return cookie
+        print(f'获取cookie成功{response.history}:', cookie)
+        if response.history:
+            raise ValueError('获取cookie失败')
+        else:
+            return cookie
 
     def save_cookie(self):
         with open('./config.json', 'r')as f:
@@ -239,7 +249,7 @@ class QccSpider():
             f.write(json.dumps(r, ensure_ascii=False))
 
     def open_cookie(self, type='cookie'):
-        if self.i % 5 == 1:
+        if self.i % 50 == 1:
             self.save_cookie()
         with open('./config.json', 'r')as f:
             r = json.loads(f.read())
@@ -267,39 +277,37 @@ class QccSpider():
         print(f'正在获取股权穿透图-子集:{response.status_code}', sonheader['cookie'])
 
         """判断为空"""
-        if response.status_code == 404:
+
+        Result = response.json().get('Result')
+        Status = response.json().get('Status')
+        if Status == 201:
             return []
         else:
-            Result = response.json().get('Result')
-            Status = response.json().get('Status')
-            if Status == 201:
-                return []
-            else:
-                if Result:
-                    EquityShareDetail = Result.get('EquityShareDetail')
-                    for k in EquityShareDetail:
-                        item = {}
-                        name = k.get('Name')
-                        level = k.get('Level')
-                        percent = k.get('Percent')
-                        percenttotal = k.get('PercentTotal')
-                        registcapi = k.get('RegistCapi')
-                        shortstatus = k.get('ShortStatus')
-                        shouldcapi = k.get('ShouldCapi')
+            if Result:
+                EquityShareDetail = Result.get('EquityShareDetail')
+                for k in EquityShareDetail:
+                    item = {}
+                    name = k.get('Name')
+                    level = k.get('Level')
+                    percent = k.get('Percent')
+                    percenttotal = k.get('PercentTotal')
+                    registcapi = k.get('RegistCapi')
+                    shortstatus = k.get('ShortStatus')
+                    shouldcapi = k.get('ShouldCapi')
 
-                        item['name'] = name
-                        item['level'] = level
-                        item['percent'] = percent
-                        item['percenttotal'] = percenttotal
-                        item['registcapi'] = registcapi
-                        item['shortstatus'] = shortstatus
-                        item['shouldcapi'] = shouldcapi
-                        item['org'] = 0
-                        item_list.append(item)
-                    return item_list
-                else:
-                    input('数据获取失败')
-                    raise ValueError('数据获取失败')
+                    item['name'] = name
+                    item['level'] = level
+                    item['percent'] = percent
+                    item['percenttotal'] = percenttotal
+                    item['registcapi'] = registcapi
+                    item['shortstatus'] = shortstatus
+                    item['shouldcapi'] = shouldcapi
+                    item['org'] = 0
+                    item_list.append(item)
+                return item_list
+            else:
+                input('数据获取失败')
+                raise ValueError('数据获取失败')
 
     @retry(delay=2, exceptions=True, max_retries=5)
     def getOwnershipStructureMix(self, url, data, keyid):
@@ -316,41 +324,38 @@ class QccSpider():
         print(f'正在获取股权穿透图-父集{response.status_code}:', response.text)
 
         """判断为空"""
-        if response.status_code == 404:
-            return []
-        else:
-            Result = response.json().get('structure')
-            Status = response.json().get('Status')
-            if Status == 201 or response.encoding == 404 or Result is None:
-                return []
-            else:
-                if Result:
-                    EquityShareDetail = Result.get('EquityShareDetail')
-                    for k in EquityShareDetail:
-                        item = {}
-                        name = k.get('Name')
-                        level = k.get('Level')
-                        percent = k.get('Percent')
-                        percenttotal = k.get('PercentTotal')
-                        registcapi = k.get('RegistCapi')
-                        shortstatus = k.get('ShortStatus')
-                        shouldcapi = k.get('ShouldCapi')
-                        stocktype = k.get('StockType')
 
-                        item['name'] = name
-                        item['level'] = level
-                        item['percent'] = percent
-                        item['percenttotal'] = percenttotal
-                        item['registcapi'] = registcapi
-                        item['shortstatus'] = shortstatus
-                        item['shouldcapi'] = shouldcapi
-                        item['stocktype'] = stocktype
-                        item['org'] = 2
-                        item_list.append(item)
-                    return item_list
-                else:
-                    input('数据获取失败')
-                    raise ValueError('数据获取失败')
+        Result = response.json().get('structure')
+        Status = response.json().get('Status')
+
+        if Result:
+            EquityShareDetail = Result.get('EquityShareDetail')
+            for k in EquityShareDetail:
+                item = {}
+                name = k.get('Name')
+                level = k.get('Level')
+                percent = k.get('Percent')
+                percenttotal = k.get('PercentTotal')
+                registcapi = k.get('RegistCapi')
+                shortstatus = k.get('ShortStatus')
+                shouldcapi = k.get('ShouldCapi')
+                stocktype = k.get('StockType')
+
+                item['name'] = name
+                item['level'] = level
+                item['percent'] = percent
+                item['percenttotal'] = percenttotal
+                item['registcapi'] = registcapi
+                item['shortstatus'] = shortstatus
+                item['shouldcapi'] = shouldcapi
+                item['stocktype'] = stocktype
+                item['org'] = 2
+                item_list.append(item)
+            return item_list
+        else:
+            input('数据获取失败')
+            raise ValueError('数据获取失败')
+
 
 class QccXls:
     def __init__(self):
@@ -368,6 +373,7 @@ class QccXls:
         return wb_list[1:]
 
     """AMC及AIC名单.xls"""
+
     def get_xls_data2(self):
         # 打开excel
         wb_list = []
@@ -391,6 +397,6 @@ class QccXls:
 
 if __name__ == '__main__':
     q = QccSpider()
-    x = QccXls().get_xls_data()
+    x = QccXls().get_xls_data2()
     for name in x:
         q.start_request(name)

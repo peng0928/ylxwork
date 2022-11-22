@@ -13,6 +13,7 @@
                 <th>任务id</th>
                 <th>开始时间</th>
                 <th>结束时间</th>
+                <th>进程id</th>
                 <th>状态</th>
                 <th>操作</th>
             </tr>
@@ -20,22 +21,31 @@
             <tbody>
             {% for query in queryset %}
                 <tr>
-                    <th scope="row">1</th>
-                    <td>{{ query.task_name }}</td>
-                    <td>{{ query.task_uuid }}</td>
-                    <td>{{ query.start_time }}</td>
-                    <td>{{ query.end_time }}</td>
-                    <td>{{ query.get_status_display }}</td>
-                    <td>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <th style="width: 20%">{{ query.task_name }}</th>
+                    <th style="width: 12%">{{ query.task_uuid }}</th>
+                    <th style="width: 12%">{{ query.start_time }}</th>
+                    <th style="width: 12%">{{ query.end_time }}</th>
+                    <th style="width: 12%">{{ query.task_id }}</th>
+                    <th>{{ query.get_status_display }}</th>
+                    <th>
                         <!-- Standard button -->
-                        <button type="button" class="btn btn-default btn-xs" run_id="{{ query.id }}" id="btnrun">运行
+                        <button type="button" class="btn btn-default btn-xs" id="{{ query.id }}" onclick="btnrun(this)">
+                            运行
                         </button>
 
                         <!-- Provides extra visual weight and identifies the primary action in a set of buttons -->
-                        <button type="button" class="btn btn-primary btn-xs" stop_id="{{ query.id }}">停止</button>
-                        <button type="button" class="btn btn-info btn-xs" reset_id="{{ query.id }}">重启</button>
+                        <button type="button" class="btn btn-primary btn-xs" id="{{ query.id }}"
+                                onclick="btnstop(this)">停止
+                        </button>
+                        <button type="button" class="btn btn-info btn-xs" id="{{ query.id }}"
+                                onclick="btnrestart(this)">重启
+                        </button>
+                        <button type="button" class="btn btn-danger btn-xs" id="{{ query.id }}" onclick="btndel(this)">
+                            删除
+                        </button>
 
-                    </td>
+                    </th>
                 </tr>
             {% endfor %}
             </tbody>
@@ -60,9 +70,9 @@
             hideMethod: "fadeOut" //   消失时的动画方式
         };
 
-        $('#btnrun').click(function () {
-            run_id = $(this).attr("run_id");
-            obj = {"id": run_id}
+        function btnrun(obj) {
+            obj = {"id": obj.id}
+            toastr.success('成功', '正在运行');
             $.ajax({
                 url: 'http://127.0.0.1:8088/task/run',
                 type: "post",
@@ -71,11 +81,42 @@
                     alert('smx失败 ');
                 },
                 success: function (result) {
-                    toastr.success('成功', '正在运行');
+                    location.reload();
                 }
             })
+        }
 
-        })
+        function btndel(obj) {
+            toastr.success('成功', '正在删除');
+            obj = {"id": obj.id};
+            $.ajax({
+                url: 'http://127.0.0.1:8088/task/del',
+                type: "post",
+                data: obj,
+                error: function () {
+                    alert('smx失败 ');
+                },
+                success: function (result) {
+                    location.reload();
+                }
+            })
+        }
+
+        function btnstop(obj) {
+            toastr.success('成功', '正在停止');
+            obj = {"id": obj.id};
+            $.ajax({
+                url: 'http://127.0.0.1:8088/task/stop',
+                type: "post",
+                data: obj,
+                error: function () {
+                    alert('smx失败 ');
+                },
+                success: function (result) {
+                    location.reload();
+                }
+            })
+        }
 
     </script>
 

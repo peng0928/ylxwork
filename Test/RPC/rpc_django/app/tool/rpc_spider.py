@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2022-11-14 09:10
 # @Author  : chenxuepeng
-import requests, time, os
+import time, os, json
 from selenium import webdriver
-from Test.RPC.useragent import get_ua
+from app.tool.useragent import get_ua
+from app.tool.redis_conn import *
 
 
 class RpcSpider(object):
 
-    def __init__(self, url: str = None):
+    def __init__(self, url: str = None, task_id: str = None):
         """
+        初始化redis
+        """
+        redisconn = redis_conn(db=1)
+        path = f'rpcfile:{task_id}:'
 
-        """
-        pid = self.get_os_id()
         start_cookie = []
         start_cookie_dict = {}
         option = webdriver.ChromeOptions()
@@ -25,7 +28,6 @@ class RpcSpider(object):
         option.add_argument("disable-blink-features=AutomationControlled")
         self.driver = webdriver.Chrome(options=option)
         check_url = url
-        print('正在访问:', check_url)
         self.driver.get(check_url)
         time.sleep(2)
         cookie = self.driver.get_cookies()
@@ -34,15 +36,20 @@ class RpcSpider(object):
             start_cookie.append(key + '=' + value)
         start_cookie = '; '.join(start_cookie)
         start_cookie_dict['startcookie'] = start_cookie
-        print('成功访问:', check_url, start_cookie_dict)
+        redisconn.set_add(field=path+'fcookie:', value=json.dumps(start_cookie_dict,ensure_ascii=False))
         while True:
-            self.open_selenium()
+            pid = self.get_os_id()
+            headers = {}
+            code = self.open_selenium()
+            headers['cookie'] = code
+            headers['pid'] = pid
+            redisconn.set_add(field=path + 'config:', value=json.dumps(headers, ensure_ascii=False))
             time.sleep(5)
 
     def open_selenium(self):
         rpc_code = 'return document.cookie'
-        aa = self.driver.execute_script(rpc_code)
-        print(aa, 11111111)
+        code = self.driver.execute_script(rpc_code)
+        return code
 
     def close_selnium(self):
         self.driver.close()
@@ -50,15 +57,11 @@ class RpcSpider(object):
     def get_os_id(self):
         return os.getppid()
 
-    def kill_pid(self):
-        pid = '18344'
-        cmd = 'taskkill /pid ' + str(pid) + ' /f'
-        os.system(cmd)
-        print(pid, 'killed')
 
     def close(self):
         self.driver.close()
 
 
+
 if __name__ == '__main__':
-    r = RpcSpider(url='https://www.runoob.com/')
+    r = RpcSpider(url='https://www.runoob.com/', task_id="48914946-daeb-369a-ac01-17630e3cb74a")

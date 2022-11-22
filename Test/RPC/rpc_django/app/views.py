@@ -1,17 +1,21 @@
-import json
+import json, os
 import re
 import uuid
 from django.core.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from app.models import *
 from django import forms
 from concurrent.futures import ThreadPoolExecutor
 from app.tool.rpc_spider import RpcSpider
+from app.tool.data_process import *
+from app.tool.redis_conn import *
 
 """处理器"""
 executor = ThreadPoolExecutor(20)
+
+
 # Create your views here.
 
 # url 表单验证器
@@ -50,7 +54,7 @@ def index(request):
                 'data': task_data
             }
             Task.objects.create(task_name=task_data, task_uuid=task_uuid)
-            return JsonResponse(json_data)
+            return redirect('/task/list')
         else:
             return render(request, 'index.html', {'form': form})
 
@@ -58,6 +62,7 @@ def index(request):
 def task_list(request):
     queryset = Task.objects.all()
     return render(request, 'task_list.html', {"queryset": queryset})
+
 
 @csrf_exempt
 def task_run(request):
@@ -69,14 +74,57 @@ def task_run(request):
             'data': 'task running...'
         }
         task_obj = Task.objects.filter(id=task_id).first()
-        print(task_obj.task_name)
+        datenow = get_datetime_now(rule="%Y-%m-%d %H:%M:%S")
+        executor.submit(rpc_task, task_obj.task_name, task_obj.task_uuid)
+        Task.objects.filter(id=task_id).update(status=1, start_time=datenow, end_time=None)
+        return JsonResponse(json_data)
+
+
+@csrf_exempt
+def task_stop(request):
+    if request.method == 'POST':
+        print(111111)
+        redisronn = redis_conn()
+        task_id = request.POST.get('id')
+        json_data = {
+            "status": True,
+            "task_id": task_id,
+            'data': 'task running...'
+        }
+        task_obj = Task.objects.filter(id=task_id).first()
+        path = f'rpcfile:{task_obj.task_uuid}:config:'
+        redis_obj = redisronn.get_data(path)
+        redis_obj = json.loads(redis_obj)
+        pid = redis_obj.get('pid')
+        if pid:
+            executor.submit(kill_pid, pid)
+            datenow = get_datetime_now(rule="%Y-%m-%d %H:%M:%S")
+            Task.objects.filter(id=task_id).update(status=2, end_time=datenow)
+            return JsonResponse(json_data)
+        else:
+            raise ValueError('停止失败')
+
+@csrf_exempt
+def task_del(request):
+    if request.method == 'POST':
+        task_id = request.POST.get('id')
+        json_data = {
+            "status": True,
+            "task_id": task_id,
+            'data': 'task del...'
+        }
+        task_obj = Task.objects.filter(id=task_id).delete()
         # executor.submit(rpc_task, 'hello', 123)
         return JsonResponse(json_data)
 
 
-
 # 耗时任务
-def rpc_task(arg1, arg2):
-    print("args: %s %s!" % (arg1, arg2))
-    RpcSpider().open_selenium()
+def rpc_task(url, task_id):
+    RpcSpider(url=url, task_id=task_id)
     print("Task is done!")
+
+
+def kill_pid(pid):
+    pid = pid
+    cmd = 'taskkill /pid ' + str(pid) + ' /f'
+    os.system(cmd)
