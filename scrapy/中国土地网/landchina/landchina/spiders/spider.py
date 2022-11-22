@@ -14,8 +14,10 @@ class SpiderSpider(scrapy.Spider):
     start_time, end_time)
 
     def start_requests(self):
-        yield scrapy.Request(url=self.starturl, method='POST', headers=self.headers, body=self.req_data,
-                             callback=self.get_page)
+        for i in range(928, 2152):
+            data = self.req_data.replace('pageNum": 1', f'pageNum": {i}')
+            yield scrapy.Request(url=self.starturl, method='POST', headers=self.headers, body=data, meta={"page": i},
+                                 callback=self.lparse)
 
     def get_page(self, response):
         obj = response.json()

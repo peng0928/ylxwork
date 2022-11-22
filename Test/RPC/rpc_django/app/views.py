@@ -12,9 +12,6 @@ from app.tool.rpc_spider import RpcSpider
 from app.tool.data_process import *
 from app.tool.redis_conn import *
 
-"""处理器"""
-executor = ThreadPoolExecutor(20)
-
 
 # Create your views here.
 
@@ -67,6 +64,7 @@ def task_list(request):
 @csrf_exempt
 def task_run(request):
     if request.method == 'POST':
+        executor = ThreadPoolExecutor(20)
         task_id = request.POST.get('id')
         json_data = {
             "status": True,
@@ -97,9 +95,12 @@ def task_stop(request):
         redis_obj = json.loads(redis_obj)
         pid = redis_obj.get('pid')
         if pid:
-            executor.submit(kill_pid, pid)
             datenow = get_datetime_now(rule="%Y-%m-%d %H:%M:%S")
             Task.objects.filter(id=task_id).update(status=2, end_time=datenow)
+            try:
+                kill_pid(pid)
+            except:
+                pass
             return JsonResponse(json_data)
         else:
             raise ValueError('停止失败')

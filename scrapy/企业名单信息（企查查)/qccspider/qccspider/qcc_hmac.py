@@ -28,9 +28,11 @@ def hmac_demo(key=None, text=None, digestmod=None):
 
 def getownershipstructuremix(keyno, tid):
     item = {}
-    key1 = 'iLAgi8QLN4kiBl468vlNkQgAk4NL84LNlrgWiLAgi8QLN4kiBl468vlNkQgAk4NL84LNlrgW'
-    text1 = '/api/charts/getownershipstructuremix{"keyno":"%s","level":1}' % keyno
-    text2 = '/api/charts/getownershipstructuremixpathString{"keyno":"%s","level":1}%s' % (keyno, tid)
+    # key1 = 'iLAgi8QLN4kiBl468vlNkQgAk4NL84LNlrgWiLAgi8QLN4kiBl468vlNkQgAk4NL84LNlrgW'
+    key1 = 'iLAgiWL4Ligk4i46Lkgigk4Billv6lL18Kik8kL8rWKALKAikN66L1vvWNiLLW1ALBlgvWlWlAiLAgiWL4Ligk4i46Lkgigk4Billv6lL18Kik8kL8rWKALKAikN66L1vvWNiLLW1ALBlgvWlWlA'
+    # text1 = '/api/charts/getownershipstructuremix{"keyno":"%s","level":1}' % keyno
+    text1 = '/api/datalist/touzilist?keyno=%s&pageindex=4{}' % keyno
+    text2 = '/api/datalist/touzilist?keyno=%s&pageindex=4pathString{}%s' % (keyno, tid)
     k1 = hmac_demo(key1, text1)[8:28]
     k2 = hmac_demo(key1, text2)
     item[k1] = k2
@@ -49,8 +51,8 @@ def getequityinvestment(keyno, tid):
 
 
 if __name__ == "__main__":
-    tid = 'a026f74acbc7e5aab3c6d6b42e3547cf'
-    keyno = '7d2ff2d16325bdc9e1a4e93b6f2f3132'
+    tid = 'c7471078d8d101a605235f57d5887e4d'
+    keyno = 'abc50fc7ac1d549540f6339b22d60aad'
     k1 = getequityinvestment(keyno, tid)
     k2 = getownershipstructuremix(keyno, tid)
     print(k1)
