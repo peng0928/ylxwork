@@ -19,7 +19,7 @@ class RpcSpider(object):
         start_cookie = []
         start_cookie_dict = {}
         option = webdriver.ChromeOptions()
-        # option.add_argument('--headless')
+        option.add_argument('--headless')
         option.add_argument('--disable-gpu')  # 不需要GPU加速
         option.add_argument('--no-sandbox')  # 无沙箱
         option.add_argument('--user-agent={}'.format(get_ua))
@@ -29,7 +29,7 @@ class RpcSpider(object):
         self.driver = webdriver.Chrome(options=option)
         check_url = url
         self.driver.get(check_url)
-        print(os.getpid())
+        # print(os.getppid())
 
         time.sleep(2)
         cookie = self.driver.get_cookies()
@@ -45,7 +45,6 @@ class RpcSpider(object):
             code = self.open_selenium()
             headers['cookie'] = code
             headers['pid'] = pid
-            print(os.getpid())
             redisconn.set_add(field=path + 'config:', value=json.dumps(headers, ensure_ascii=False))
             time.sleep(1)
 
@@ -63,6 +62,7 @@ class RpcSpider(object):
 
     def __del__(self):
         self.driver.close()
+        self.driver.quit()
 
 
 

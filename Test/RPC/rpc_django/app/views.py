@@ -77,10 +77,12 @@ def task_run(request):
         rpath = f'rpcfile:{task_obj.task_uuid}:config:'
         if redisronn.find_data(value=rpath):
             json_data.update({'data': '任务已经运行'})
+            print('任务已经运行')
+            raise ValueError('任务已经运行')
         else:
             executor.submit(rpc_task, task_obj.task_name, task_obj.task_uuid)
             Task.objects.filter(id=task_id).update(status=1, start_time=datenow, end_time=None)
-        return JsonResponse(json_data)
+            return JsonResponse(json_data)
 
 
 @csrf_exempt
@@ -136,5 +138,5 @@ def rpc_task(url, task_id):
 
 def kill_pid(pid):
     pid = pid
-    cmd = 'taskkill /pid ' + str(pid) + ' /f'
+    cmd = 'taskkill /f /t /pid ' + str(pid)
     os.system(cmd)
