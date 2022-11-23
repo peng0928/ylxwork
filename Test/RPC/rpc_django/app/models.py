@@ -6,7 +6,6 @@ from django.db import models
 class Task(models.Model):
     task_name = models.CharField(max_length=50, verbose_name='任务名称')
     task_uuid = models.CharField(max_length=50, verbose_name='任务id', blank=True, null=True)
-    task_id = models.CharField(max_length=50, verbose_name='进程id', blank=True, null=True)
     start_time = models.DateTimeField(verbose_name='开始时间', auto_now=True)
     end_time = models.DateTimeField(verbose_name='结束时间', blank=True, null=True)
     status_choice = (
@@ -21,7 +20,6 @@ class Task(models.Model):
 class TaskList(models.Model):
     task_name = models.CharField(max_length=50, verbose_name='任务名称')
     task_uuid = models.CharField(max_length=50, verbose_name='任务id', blank=True, null=True)
-    task_id = models.CharField(max_length=50, verbose_name='进程id', blank=True, null=True)
     start_time = models.DateTimeField(verbose_name='开始时间', auto_now=True)
     end_time = models.DateTimeField(verbose_name='结束时间', blank=True, null=True)
     status_choice = (

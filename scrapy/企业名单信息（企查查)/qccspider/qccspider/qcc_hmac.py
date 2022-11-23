@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-
+import execjs
 # hmac_demo.py HMAC算法
 # 与hashlib不同之处在于多了key
 
@@ -50,10 +50,37 @@ def getequityinvestment(keyno, tid):
     return item
 
 
+"""对外投资"""
+
+
+def outbound(keyno: str = None, pageindex: str = None, tid: str = None, ):
+    """
+    outbound('6fd1ea84db38609f091e64530e904ce9', '7', 'c7471078d8d101a605235f57d5887e4d')
+    :param keyno: 企业id
+    :param pageindex: 对外投资页码
+    :param tid: window.tid
+    :return:
+    """
+    qcc_dict = {}
+    with open('qcchmac.js', 'r')as f:
+        qcc_encode = f.read()
+    ctx = execjs.compile(qcc_encode)
+    e = f"/api/datalist/touzilist?keyno={keyno}&pageindex={pageindex}"
+    result = ctx.call('r', e)
+    text1 = '/api/datalist/touzilist?keyno=%s&pageindex=%s{}'% (keyno, pageindex)
+    text2 = '/api/datalist/touzilist?keyno=%s&pageindex=%spathString{}%s' % (keyno, pageindex, tid)
+    k1 = hmac_demo(result, text1)[8:28]
+    k2 = hmac_demo(result, text2)
+    qcc_dict[k1] = k2
+    print(qcc_dict)
+    return qcc_dict
+
+
 if __name__ == "__main__":
-    tid = 'c7471078d8d101a605235f57d5887e4d'
-    keyno = 'abc50fc7ac1d549540f6339b22d60aad'
-    k1 = getequityinvestment(keyno, tid)
-    k2 = getownershipstructuremix(keyno, tid)
-    print(k1)
-    print(k2)
+    # tid = 'c7471078d8d101a605235f57d5887e4d'
+    # keyno = 'abc50fc7ac1d549540f6339b22d60aad'
+    # k1 = getequityinvestment(keyno, tid)
+    # k2 = getownershipstructuremix(keyno, tid)
+    # print(k1)
+    # print(k2)
+    outbound('6fd1ea84db38609f091e64530e904ce9', '7', 'c7471078d8d101a605235f57d5887e4d')

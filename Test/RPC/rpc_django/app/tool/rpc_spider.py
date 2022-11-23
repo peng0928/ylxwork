@@ -19,7 +19,7 @@ class RpcSpider(object):
         start_cookie = []
         start_cookie_dict = {}
         option = webdriver.ChromeOptions()
-        option.add_argument('--headless')
+        # option.add_argument('--headless')
         option.add_argument('--disable-gpu')  # 不需要GPU加速
         option.add_argument('--no-sandbox')  # 无沙箱
         option.add_argument('--user-agent={}'.format(get_ua))
@@ -29,6 +29,8 @@ class RpcSpider(object):
         self.driver = webdriver.Chrome(options=option)
         check_url = url
         self.driver.get(check_url)
+        print(os.getpid())
+
         time.sleep(2)
         cookie = self.driver.get_cookies()
         for c in cookie:
@@ -43,8 +45,9 @@ class RpcSpider(object):
             code = self.open_selenium()
             headers['cookie'] = code
             headers['pid'] = pid
+            print(os.getpid())
             redisconn.set_add(field=path + 'config:', value=json.dumps(headers, ensure_ascii=False))
-            time.sleep(5)
+            time.sleep(1)
 
     def open_selenium(self):
         rpc_code = 'return document.cookie'
@@ -55,13 +58,13 @@ class RpcSpider(object):
         self.driver.close()
 
     def get_os_id(self):
-        return os.getppid()
+        return os.getpid()
 
 
-    def close(self):
+    def __del__(self):
         self.driver.close()
 
 
 
 if __name__ == '__main__':
-    r = RpcSpider(url='https://www.runoob.com/', task_id="48914946-daeb-369a-ac01-17630e3cb74a")
+    r = RpcSpider(url='https://www.nmpa.gov.cn/', task_id="48914946-daeb-369a-ac01-17630e3cb74a")

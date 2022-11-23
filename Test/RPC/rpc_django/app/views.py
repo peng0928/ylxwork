@@ -2,17 +2,18 @@ import json, os
 import re
 import uuid
 from django.core.exceptions import ValidationError
+from concurrent.futures import ThreadPoolExecutor
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from app.models import *
 from django import forms
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Process
 from app.tool.rpc_spider import RpcSpider
 from app.tool.data_process import *
 from app.tool.redis_conn import *
 
-
+executor = ThreadPoolExecutor(20)
 # Create your views here.
 
 # url 表单验证器
@@ -64,24 +65,27 @@ def task_list(request):
 @csrf_exempt
 def task_run(request):
     if request.method == 'POST':
-        executor = ThreadPoolExecutor(20)
+        redisronn = redis_conn()
         task_id = request.POST.get('id')
         json_data = {
             "status": True,
             "task_id": task_id,
-            'data': 'task running...'
+            'data': '任务正在运行'
         }
         task_obj = Task.objects.filter(id=task_id).first()
         datenow = get_datetime_now(rule="%Y-%m-%d %H:%M:%S")
-        executor.submit(rpc_task, task_obj.task_name, task_obj.task_uuid)
-        Task.objects.filter(id=task_id).update(status=1, start_time=datenow, end_time=None)
+        rpath = f'rpcfile:{task_obj.task_uuid}:config:'
+        if redisronn.find_data(value=rpath):
+            json_data.update({'data': '任务已经运行'})
+        else:
+            executor.submit(rpc_task, task_obj.task_name, task_obj.task_uuid)
+            Task.objects.filter(id=task_id).update(status=1, start_time=datenow, end_time=None)
         return JsonResponse(json_data)
 
 
 @csrf_exempt
 def task_stop(request):
     if request.method == 'POST':
-        print(111111)
         redisronn = redis_conn()
         task_id = request.POST.get('id')
         json_data = {
@@ -99,6 +103,8 @@ def task_stop(request):
             Task.objects.filter(id=task_id).update(status=2, end_time=datenow)
             try:
                 kill_pid(pid)
+                redisronn.del_data(value=path)
+                redisronn.del_data(value=path.replace('config', 'fcookie'))
             except:
                 pass
             return JsonResponse(json_data)
@@ -108,6 +114,7 @@ def task_stop(request):
 @csrf_exempt
 def task_del(request):
     if request.method == 'POST':
+        redisconn = redis_conn()
         task_id = request.POST.get('id')
         json_data = {
             "status": True,
@@ -121,7 +128,9 @@ def task_del(request):
 
 # 耗时任务
 def rpc_task(url, task_id):
-    RpcSpider(url=url, task_id=task_id)
+    p = Process(target=RpcSpider, args=(url, task_id,))
+    p.start()
+    p.join()
     print("Task is done!")
 
 

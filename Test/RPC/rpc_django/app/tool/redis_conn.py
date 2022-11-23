@@ -8,27 +8,20 @@ class redis_conn():
         self.redis_conn = redis.Redis(connection_pool=redis_pool)
 
     def set_add(self, field=None, value=None):
-        if field is None:
-            field = self.field
         self.redis_conn.set(field, value)
-        print(f'sadd success value={value}')
 
     def get_data(self, field=None):
         if field is None:
             field = self.field
         result = self.redis_conn.get(field)
-        result = str(result, 'utf-8')
+        result = str(result, 'utf-8') if result else ''
         return result
 
-    def del_data(self, field=None, value=None):
-        if field is None:
-            field = self.field
-        self.redis_conn.srem(field, value)
-        print(f'del success value={value}')
+    def del_data(self, value=None):
+        self.redis_conn.delete(value)
 
-    def find_data(self, field=None, value=None):
-        if field is None:
-            field = self.field
-        result = self.redis_conn.sismember(field, value)
-        return result
+    def find_data(self, value=None):
+        result = self.redis_conn.exists(value)
+        return bool(result)
+
 

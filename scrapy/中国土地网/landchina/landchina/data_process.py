@@ -472,34 +472,3 @@ def error(e):
     return msg
 
 
-def trycatch(t=None):
-    '''
-    :param t: 重试次数
-    :param retry_num: 初始重试次数
-    :return:
-    '''
-
-    def wrap(x):
-
-        def inner(*args, **kwargs):
-            retry_num = 0
-            try:
-                return x(*args, **kwargs)
-            except Exception as e:
-                msg = error(e)
-                print(msg, t)
-
-                while True:
-                    retry_num += 1
-                    if retry_num > t:
-                        return '超出重试次数!'
-                    try:
-                        print('正在尝试重试:', retry_num)
-                        return x(*args, **kwargs)
-                    except Exception as e:
-                        msg = error(e)
-                        print(msg, t)
-
-        return inner
-
-    return wrap

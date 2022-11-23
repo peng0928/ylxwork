@@ -188,25 +188,27 @@ class QccSpider():
         """工商数据"""
         print('获取到工商数据:', sql_key, sql_value)
 
-        qcc_text = resp.xpath("//div[@class='text']//text()")
-        qcc_text = ''.join(qcc_text)
-        print(qcc_text)
-        if '股权穿透图' in qcc_text:
-            """股权穿透图"""
-            sondata = '{"keyNo": "%s"}' % keyid
-            sonurl = 'https://www.qcc.com/api/charts/getEquityInvestment'
-            sonresult = self.getEquityInvestment(url=sonurl, data=sondata, keyid=keyid)
-            print('获取到股权穿透图-子级:', sonresult)
-
-            fatherdata = '{"keyNo": "%s","level":1}' % keyid
-            fatherurl = 'https://www.qcc.com/api/charts/getOwnershipStructureMix'
-            fatherresult = self.getOwnershipStructureMix(url=fatherurl, data=fatherdata, keyid=keyid)
-            print('获取到股权穿透图-父级:', fatherresult)
-
-            """数据入库"""
-            qcc_conn.qcc_insert(sql_key, sql_value, sonresult, fatherresult, search_key)
-            qcc_conn.close()
-            time.sleep(2)
+        """股东信息"""
+        shareholder_dict = {}
+        shareholder_list = []
+        shareholder_xpath = "//div[@class='tcaption partner-tcaption']/h3[@class='title']//text()"
+        shareholder = resp.xpath(shareholder_xpath)
+        if shareholder:
+            information_xpath = "//div[@class='tablist'][1]//div[@class='app-tree-table']/table[@class='ntable']/tr/td"
+            information = resp.xpath(information_xpath)
+            for obj in information:
+                obj_name = obj.xpath("//span[@class='name']/a/text()")
+                obj_type = obj.xpath("//table[@class='ntable']/tr/td[@class='center'][1]//text()")
+                obj_ratio = obj.xpath("//table[@class='ntable']/tr/td[@class='center'][2]//text()")
+                obj_number = obj.xpath("//table[@class='ntable']/tr/td[@class='right']//text()")
+                obj_relation = obj.xpath("//table[@class='ntable']/tr/td[@class='left']//text()")
+                shareholder_dict['name'] = obj_name
+                shareholder_dict['type'] = obj_type
+                shareholder_dict['ratio'] = obj_ratio
+                shareholder_dict['number'] = obj_number
+                shareholder_dict['relation'] = obj_relation
+                shareholder_list.append(shareholder_dict)
+            print(shareholder_list)
 
     def log(self):
         os.makedirs('./loging', exist_ok=True)

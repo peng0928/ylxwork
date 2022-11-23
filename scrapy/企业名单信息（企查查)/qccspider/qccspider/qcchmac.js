@@ -46,9 +46,3 @@ aaa = r(e);
 console.log('touzilist:',aaa);
 
 
-e = "/api/charts/getequityinvestment"
-//父级 '/api/charts/getequityinvestment{"keyno":"8c9f7ddc1a7bcee3d1f7676773fe9404"}'
-//父级 '/api/charts/getownershipstructuremixpathString{"keyno":"8c9f7ddc1a7bcee3d1f7676773fe9404","level":1}a2f9c4e1d81e4887c0e08ff013acf07f'
-aaa = r(e);
-console.log('getequityinvestment:', aaa);
-

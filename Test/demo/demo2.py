@@ -1,16 +1,30 @@
-import signal
-import time
-import datetime
+from multiprocessing import Process
+import os, time
+from concurrent.futures import ThreadPoolExecutor
 
-def handler(sig, frame):
-    print(datetime.datetime.now())
-    print("handler function")
+executor = ThreadPoolExecutor(20)
 
 
-if __name__ == "__main__":
-    signal.signal(signal.SIGINT, handler)
-    print(datetime.datetime.now())
-    signal.alarm(5)
-    time.sleep(10)
-    print(datetime.datetime.now())
-    print("main function")
+def func():
+    print('这是一个子进程——>进程号：', os.getpid(), '  主进程号：', os.getppid())
+    while True:
+        for i in range(60):
+            print('a', i, time.sleep(i))
+
+
+def run():
+    p = Process(target=func)
+    p.start()
+    p.join()
+
+if __name__ == '__main__':
+    print('这是主进程——>进程号：', os.getpid(), '  主进程号（pycharm）：', os.getppid())
+    # 实例化一个子进程对象
+
+    executor.submit(run)
+
+    print('执行了完了主进程的内容')
+
+
+    for i in range(60):
+        print(i, time.sleep(i))
