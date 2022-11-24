@@ -24,4 +24,5 @@ urlpatterns = [
     path('task/run', views.task_run),
     path('task/del', views.task_del),
     path('task/stop', views.task_stop),
+    path('task/api/<str:task_id>', views.task_api),
 ]

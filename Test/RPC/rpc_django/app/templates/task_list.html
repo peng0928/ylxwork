@@ -1,7 +1,7 @@
 {% extends 'bootstrap_html.html' %}
 {% block content %}
     <div class="bs-example" data-example-id="simple-table">
-        <table class="table">
+        <table class="table table-bordered">
             <caption>RPC任务列表
                 <a href="#"><span class="label label-primary">未启动</span></a>
                 <a href="#"><span class="label label-success">正在启动</span></a>
@@ -14,19 +14,21 @@
                 <th>开始时间</th>
                 <th>结束时间</th>
                 <th>状态</th>
+                <th>查看</th>
                 <th>操作</th>
             </tr>
             </thead>
             <tbody>
             {% for query in queryset %}
                 <tr>
-                    <th scope="row">{{ forloop.counter }}</th>
-                    <th style="width: 20%">{{ query.task_name }}</th>
-                    <th style="width: 12%">{{ query.task_uuid }}</th>
-                    <th style="width: 12%">{{ query.start_time }}</th>
-                    <th style="width: 12%">{{ query.end_time }}</th>
-                    <th>{{ query.get_status_display }}</th>
-                    <th>
+                    <td scope="row">{{ forloop.counter }}</td>
+                    <td>{{ query.task_name }}</td>
+                    <td>{{ query.task_uuid }}</td>
+                    <td>{{ query.start_time }}</td>
+                    <td>{{ query.end_time }}</td>
+                    <td>{{ query.get_status_display }}</td>
+                    <td><a href="/task/api/{{ query.task_uuid }}" target="_blank">详细</a></td>
+                    <td>
                         <!-- Standard button -->
                         <button type="button" class="btn btn-default btn-xs" id="{{ query.id }}" onclick="btnrun(this)">
                             运行
@@ -43,7 +45,8 @@
                             删除
                         </button>
 
-                    </th>
+                    </td>
+
                 </tr>
             {% endfor %}
             </tbody>
@@ -54,7 +57,7 @@
     <script type="text/javascript">
         toastr.options = {
             closeButton: false, // 是否显示关闭按钮，（提示框右上角关闭按钮）
-            debug: false, // 是否使用deBug模式
+            debug: true, // 是否使用deBug模式
             progressBar: true, // 是否显示进度条，（设置关闭的超时时间进度条）
             positionClass: "toast-top-center", // 设置提示款显示的位置
             onclick: null, // 点击消息框自定义事件
@@ -78,8 +81,14 @@
                     toastr.success('失败', '运行失败');
                 },
                 success: function (result) {
-                    toastr.success('成功', '正在运行');
-                    location.reload();
+                    var data = result.data.toString()
+                    var s = String('任务已经运行')
+                    if (data == s) {
+                        toastr.success(s);
+                    } else {
+                        alert('成功, 正在运行');
+                        location.reload();
+                    }
 
                 }
             })
@@ -110,11 +119,17 @@
                 type: "post",
                 data: obj,
                 error: function () {
-                    toastr.success('失败', '停止失败');
+                    toastr.success('停止失败');
                 },
                 success: function (result) {
-                    toastr.success('成功', '正在停止');
-                    location.reload();
+                    var data = result.data.toString()
+                    var s = String('任务停止失败')
+                    if (data == s) {
+                        toastr.success('任务未启动');
+                    } else {
+                        alert('正在停止');
+                        location.reload();
+                    }
                 }
             })
         }

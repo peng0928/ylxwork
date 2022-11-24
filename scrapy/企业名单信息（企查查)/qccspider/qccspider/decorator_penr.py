@@ -1,4 +1,4 @@
-import time
+import time, copy
 from functools import wraps
 
 
@@ -14,7 +14,7 @@ def retry(max_retries: int = 3, delay: (int, float) = 0, exceptions: bool = Fals
         def wrapper(*args, **kwargs):
             retry_count = max_retries
             try:
-                result = func(*args, **kwargs)
+                result = copy.deepcopy(func(*args, **kwargs))
                 return result
 
             except Exception as e:
@@ -28,7 +28,7 @@ def retry(max_retries: int = 3, delay: (int, float) = 0, exceptions: bool = Fals
                     print('正常重试,剩余重试次数:', retry_count - 1)
 
                     try:
-                        result = func(*args, **kwargs)
+                        result = copy.deepcopy(func(*args, **kwargs))
                         return result
                     except Exception as e:
                         if exceptions:

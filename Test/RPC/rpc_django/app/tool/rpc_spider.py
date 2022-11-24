@@ -55,16 +55,21 @@ class RpcSpider(object):
 
     def close_selnium(self):
         self.driver.close()
+        self.driver.quit()
 
     def get_os_id(self):
         return os.getpid()
 
 
     def __del__(self):
+        print(11)
         self.driver.close()
         self.driver.quit()
 
-
+import atexit
+@atexit.register
+def a():
+    print('gqqww')
 
 if __name__ == '__main__':
     r = RpcSpider(url='https://www.nmpa.gov.cn/', task_id="48914946-daeb-369a-ac01-17630e3cb74a")

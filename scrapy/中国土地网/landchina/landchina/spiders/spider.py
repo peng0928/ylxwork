@@ -73,5 +73,47 @@ class SpiderSpider(scrapy.Spider):
             with open('./1.txt', 'a')as f:
                 f.write(str(response.meta['page']) + '\n')
 
+    def cparse(self, response):
+        data = response.json().get('data')
+        if data:
+            xzqFullName = data.get()
+            zdZl = data.get()
+            tdYt = data.get()
+            crNx = data.get()
+            mj = data.get() + '平方米'
+            rjl = data.get('minRjl') +'≤ 容积率 ≤' + data.get('maxRjl')
 
 
+            maxJzMd = data.get('maxJzMd')
+            minJzMd = data.get('minJzMd')
+            jzmd = data.get()
+
+            gyFs = data.get()
+            tdJb = data.get('tdJb')
+            jzMj = data.get('jzMj')
+
+            maxLhl = data.get('maxLhl')
+            minLhl = data.get('minLhl')
+            Lhl = ''
+
+            maxJzXg = data.get('maxJzXg')
+            minJzXg = data.get('minJzXg')
+            JzXg = ''
+
+            bmjz = data.get('tjSqSjE')
+            bmqs = data.get('tjSqSjS')
+
+            zpjz = data.get('gpSjE')
+            zpqs = data.get('gpSjS')
+
+            crBzj = data.get('crBzj')
+            jjFd = data.get('jjFd')
+            cjJg = data.get('cjJg')
+
+            gs_sdate = data.get('gsSjE')
+            gs_edate = data.get('gsSjS')
+            gs_date = '' #成交公示日期
+
+
+            tzQd = data.get('tzQd') # 投资强度
+            srDw = data.get('srDw') #受让人

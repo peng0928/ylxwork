@@ -14,6 +14,8 @@ from app.tool.data_process import *
 from app.tool.redis_conn import *
 
 executor = ThreadPoolExecutor(20)
+
+
 # Create your views here.
 
 # url 表单验证器
@@ -65,7 +67,6 @@ def task_list(request):
 @csrf_exempt
 def task_run(request):
     if request.method == 'POST':
-        redisronn = redis_conn()
         task_id = request.POST.get('id')
         json_data = {
             "status": True,
@@ -74,11 +75,9 @@ def task_run(request):
         }
         task_obj = Task.objects.filter(id=task_id).first()
         datenow = get_datetime_now(rule="%Y-%m-%d %H:%M:%S")
-        rpath = f'rpcfile:{task_obj.task_uuid}:config:'
-        if redisronn.find_data(value=rpath):
+        if task_obj.status == 1:
             json_data.update({'data': '任务已经运行'})
-            print('任务已经运行')
-            raise ValueError('任务已经运行')
+            return JsonResponse(json_data)
         else:
             executor.submit(rpc_task, task_obj.task_name, task_obj.task_uuid)
             Task.objects.filter(id=task_id).update(status=1, start_time=datenow, end_time=None)
@@ -95,23 +94,23 @@ def task_stop(request):
             "task_id": task_id,
             'data': 'task running...'
         }
-        task_obj = Task.objects.filter(id=task_id).first()
-        path = f'rpcfile:{task_obj.task_uuid}:config:'
-        redis_obj = redisronn.get_data(path)
-        redis_obj = json.loads(redis_obj)
-        pid = redis_obj.get('pid')
-        if pid:
-            datenow = get_datetime_now(rule="%Y-%m-%d %H:%M:%S")
-            Task.objects.filter(id=task_id).update(status=2, end_time=datenow)
-            try:
+        try:
+            task_obj = Task.objects.filter(id=task_id).first()
+            path = f'rpcfile:{task_obj.task_uuid}:config:'
+            redis_obj = redisronn.get_data(path)
+            redis_obj = json.loads(redis_obj)
+            pid = redis_obj.get('pid')
+            if pid:
+                datenow = get_datetime_now(rule="%Y-%m-%d %H:%M:%S")
+                Task.objects.filter(id=task_id).update(status=2, end_time=datenow)
                 kill_pid(pid)
                 redisronn.del_data(value=path)
                 redisronn.del_data(value=path.replace('config', 'fcookie'))
-            except:
-                pass
+                return JsonResponse(json_data)
+        except:
+            json_data.update({'data': '任务停止失败'})
             return JsonResponse(json_data)
-        else:
-            raise ValueError('停止失败')
+
 
 @csrf_exempt
 def task_del(request):
@@ -126,6 +125,22 @@ def task_del(request):
         task_obj = Task.objects.filter(id=task_id).delete()
         # executor.submit(rpc_task, 'hello', 123)
         return JsonResponse(json_data)
+
+
+def task_api(request, task_id):
+    redisronn = redis_conn()
+    config_path = f'rpcfile:{task_id}:config:'
+    fcookie_path = f'rpcfile:{task_id}:fcookie:'
+    fcookie_obj = redisronn.get_data(fcookie_path)
+    config_obj = redisronn.get_data(config_path)
+    print(task_id)
+    json_data = {
+        "status": True,
+        "task_id": task_id,
+        'config': config_obj,
+        'fcookie': fcookie_obj,
+    }
+    return JsonResponse(json_data)
 
 
 # 耗时任务
