@@ -32,20 +32,37 @@ class ProxyMiddleware(object):
 
     def process_response(self, request, response, spider):
         # retry_times是请求次数
-        retry_times = request.meta['retry_times']
-        total = response.json().get('data').get('total')
+        if 'transfer/list' in response.url:
+            retry_times = request.meta['retry_times']
+            total = response.json().get('data').get('total')
+            if response.status != 200 or total > 30000:
+                if retry_times > 3:
+                    print(response.url,'当前已请求3次，放弃请求:')
+                    return response
+                else:
+                    print('响应正在尝试ip：',response.url)
+                    new_request = request.copy()
+                    new_request.dont_filter = True
+                    new_request.meta['dont_retry'] = True
+                    return new_request
+            return response
 
-        if response.status != 200 or total > 30000:
-            if retry_times > 3:
-                print(response.url,'当前已请求3次，放弃请求:')
-                return response
-            else:
-                print('响应正在尝试ip：',response.url)
-                new_request = request.copy()
-                new_request.dont_filter = True
-                new_request.meta['dont_retry'] = True
-                return new_request
-        return response
+        if 'land/detail' in response.url:
+            retry_times = request.meta['retry_times']
+            print(len(response.text), response.text)
+            if response.status != 200:
+                if retry_times > 3:
+                    print(response.url,'当前已请求3次，放弃请求:')
+                    return response
+                else:
+                    print('响应正在尝试ip：',response.url)
+                    new_request = request.copy()
+                    new_request.dont_filter = True
+                    new_request.meta['dont_retry'] = True
+                    return new_request
+            return response
+
+
 
 
 

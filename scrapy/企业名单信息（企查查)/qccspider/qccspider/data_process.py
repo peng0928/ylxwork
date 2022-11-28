@@ -11,35 +11,40 @@ from lxml import etree
 
 
 class Xpath():
-    def __init__(self, response, encoding='utf-8'):
+    def __init__(self, response):
         if isinstance(response, str):
             self.res = etree.HTML(response)
         else:
-            response.encoding = encoding
-            self.res = etree.HTML(response.text)
+            self.res = response
 
-    def xpath(self, x=None, filter='style|script', character=True, is_list=False, easy=False):
+    def xpath(self, x=None, filter='style|script', character=True, is_list=True, easy=False, text=False):
         if filter != None:
             tree = xpath_filter(self.res, filter=filter)
-            x = x.split('|')
-            if easy:
-                x = [i + '/text()' if '/@' not in i else i for i in x]
-            else:
-                x = [i + '//text()' if '/@' not in i else i for i in x]
-            x = '|'.join(x)
+            if text:
+                x = x.split('|')
+                if easy:
+                    x = [i + '/text()' if '/@' not in i else i for i in x]
+                else:
+                    x = [i + '//text()' if '/@' not in i else i for i in x]
+                x = '|'.join(x)
 
-            obj = tree.xpath(x)
-            obj = process_text(obj, character, is_list)
+                obj = tree.xpath(x)
+                obj = process_text(obj, character, is_list)
+            else:
+                obj = tree.xpath(x)
 
         else:
-            x = x.split('|')
-            if easy:
-                x = [i + '/text()' if '/@' not in i else i for i in x]
+            if text:
+                x = x.split('|')
+                if easy:
+                    x = [i + '/text()' if '/@' not in i else i for i in x]
+                else:
+                    x = [i + '//text()' if '/@' not in i else i for i in x]
+                x = '|'.join(x)
+                obj = self.res.xpath(x)
+                obj = process_text(obj, character, is_list)
             else:
-                x = [i + '//text()' if '/@' not in i else i for i in x]
-            x = '|'.join(x)
-            obj = self.res.xpath(x)
-            obj = process_text(obj, character, is_list)
+                obj = self.res.xpath(x)
 
         return obj
 
@@ -272,7 +277,7 @@ def include_number(s):
 
 
 # etree解析
-def process_text(obj, character=True, is_list=False):
+def process_text(obj, character=True, is_list=True):
     L = []
     if isinstance(obj, str):
         L.append(obj)
@@ -289,7 +294,7 @@ def process_text(obj, character=True, is_list=False):
                     L.append(item)
             else:
                 L.append(item)
-    if is_list:
+    if is_list is True:
         return L
 
     if character:

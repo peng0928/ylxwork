@@ -6,7 +6,7 @@ import execjs
 
 import hmac
 
-tid = 'a026f74acbc7e5aab3c6d6b42e3547cf'  # 浏览器环境window.tid
+tid = 'c7471078d8d101a605235f57d5887e4d'  # 浏览器环境window.tid
 
 
 def hmac_demo(key=None, text=None, digestmod=None):
@@ -53,7 +53,7 @@ def getequityinvestment(keyno, tid):
 """对外投资"""
 
 
-def outbound(keyno: str = None, pageindex: str = None, tid: str = None, ):
+def outbound(keyno: str = None, pageindex: str = None, tid: str = None, webkey=None):
     """
     outbound('6fd1ea84db38609f091e64530e904ce9', '7', 'c7471078d8d101a605235f57d5887e4d')
     :param keyno: 企业id
@@ -65,15 +65,58 @@ def outbound(keyno: str = None, pageindex: str = None, tid: str = None, ):
     with open('qcchmac.js', 'r')as f:
         qcc_encode = f.read()
     ctx = execjs.compile(qcc_encode)
-    e = f"/api/datalist/touzilist?keyno={keyno}&pageindex={pageindex}"
+    e = f"/api/datalist/{webkey}?keyno={keyno}&pageindex={pageindex}"
     result = ctx.call('r', e)
-    text1 = '/api/datalist/touzilist?keyno=%s&pageindex=%s{}'% (keyno, pageindex)
-    text2 = '/api/datalist/touzilist?keyno=%s&pageindex=%spathString{}%s' % (keyno, pageindex, tid)
+    text1 = '/api/datalist/%s?keyno=%s&pageindex=%s{}' % (webkey, keyno, pageindex)
+    text2 = '/api/datalist/%s?keyno=%s&pageindex=%spathString{}%s' % (webkey, keyno, pageindex, tid)
     k1 = hmac_demo(result, text1)[8:28]
     k2 = hmac_demo(result, text2)
     qcc_dict[k1] = k2
-    print(qcc_dict)
     return qcc_dict
+
+
+"""股东信息"""
+
+
+def information(keyno: str = None, pageindex: str = None, tid: str = None, new=False):
+    """
+    outbound('6fd1ea84db38609f091e64530e904ce9', '7', 'c7471078d8d101a605235f57d5887e4d')
+    :param keyno: 企业id
+    :param pageindex: 对外投资页码
+    :param tid: window.tid
+    :return:
+    """
+    qcc_dict = {}
+    new = '&type=ipopartners' if new else ''
+    with open('qcchmac.js', 'r')as f:
+        qcc_encode = f.read()
+    ctx = execjs.compile(qcc_encode)
+    e = "/api/datalist/partner?issortasc=true&keyno=%s&pageindex=1&pagesize=50&sortfield=shouldcapi%s" % (keyno, new)
+    result = ctx.call('r', e)
+    text1 = "/api/datalist/partner?issortasc=true&keyno=%s&pageindex=1&pagesize=50&sortfield=shouldcapi%s{}" % (
+        keyno, new)
+    text2 = '/api/datalist/partner?issortasc=true&keyno=%s&pageindex=1&pagesize=50&sortfield=shouldcapi%spathString{}%s' % (
+        keyno, new, tid)
+    k1 = hmac_demo(result, text1)[8:28]
+    k2 = hmac_demo(result, text2)
+    qcc_dict[k1] = k2
+    return qcc_dict
+
+
+def gethmac(qtypy=0, keyno=None, pageindex=None, tid=None, new=None):
+    """
+    gethmac
+    :param qtypy:
+    :param typy: 0:股东信息, 1:对外投资
+    :param keyno:
+    :param pageindex:
+    :param tid:
+    :return:
+    """
+    if qtypy == 0:
+        return information(keyno, pageindex, tid, new)
+    if qtypy == 1:
+        return outbound(keyno, pageindex, tid, webkey='touzilist')
 
 
 if __name__ == "__main__":
@@ -83,4 +126,4 @@ if __name__ == "__main__":
     # k2 = getownershipstructuremix(keyno, tid)
     # print(k1)
     # print(k2)
-    outbound('6fd1ea84db38609f091e64530e904ce9', '7', 'c7471078d8d101a605235f57d5887e4d')
+    print(gethmac(1, keyno='b4858d5cc72e05c7a1622b2eda293986', pageindex=1, tid='c7471078d8d101a605235f57d5887e4d', new=True))

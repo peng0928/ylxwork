@@ -2,6 +2,7 @@ import math, json, uuid
 import scrapy
 from ..data_process import *
 from ..decorator_penr import *
+from ..redis_conn import *
 
 
 class SpiderSpider(scrapy.Spider):
@@ -12,13 +13,12 @@ class SpiderSpider(scrapy.Spider):
     start_time = "2022-01-01 00:00:00"
     end_time = f"{get_datetime_now()} 23:59:59"
     req_data = '{"pageNum": 1, "pageSize": 10, "tdYt": "07", "startDate": "%s", "endDate": "%s"}' % (
-    start_time, end_time)
+        start_time, end_time)
 
     def start_requests(self):
         ii = int(input(':'))
-        for i in range(ii, 2154):
+        for i in range(ii, 2173):
             data = self.req_data.replace('pageNum": 1', f'pageNum": {i}')
-            print(data)
             yield scrapy.Request(url=self.starturl, method='POST', headers=self.headers, body=data, meta={"page": i},
                                  callback=self.lparse)
 
@@ -34,10 +34,10 @@ class SpiderSpider(scrapy.Spider):
                 yield scrapy.Request(url=self.starturl, method='POST', headers=self.headers, dont_filter=True,
                                      body=data, callback=self.lparse, meta={"page": i})
 
-
     def lparse(self, response):
         print('当前页: ', response.meta['page'])
         item = {}
+        reconn = redis_conn()
         obj = response.json()
         data = obj.get('data')
         total = data.get('total')
@@ -53,6 +53,7 @@ class SpiderSpider(scrapy.Spider):
                     tdYt = i.get('tdYt')  # 土地用途
                     gyFs = i.get('gyFs')  # 供应方式
                     fbSj = i.get('fbSj')  # 发布时间
+                    gyggZdGuid = i.get('gyggZdGuid')  # 发布时间
 
                     item['xzqFullName'] = xzqFullName
                     item['zdh'] = zdh
@@ -66,54 +67,118 @@ class SpiderSpider(scrapy.Spider):
                     item_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, uuid_str)
                     item['uuid'] = str(item_uuid.hex)
                     # print(item)
-                    yield item
+
+                    curl = 'https://api.landchina.com/tGyggZd/land/detail'
+                    cdata = '{"landType":1,"landGuid":"%s"}' % gyggZdGuid
+                    print(cdata)
+                    select_result = reconn.find_data(value=item['uuid'])
+                    if select_result is False:
+                        yield scrapy.Request(url=curl, method='POST', headers=self.headers, dont_filter=True,
+                                             body=cdata,
+                                             callback=self.cparse, meta=item)
+                    else:
+                        print('已存在', item_uuid)
         else:
             print('error')
-            time.sleep(40)
+            time.sleep(60)
             with open('./1.txt', 'a')as f:
                 f.write(str(response.meta['page']) + '\n')
 
     def cparse(self, response):
         data = response.json().get('data')
+        citem = {}
         if data:
-            xzqFullName = data.get()
-            zdZl = data.get()
-            tdYt = data.get()
-            crNx = data.get()
-            mj = data.get() + '平方米'
-            rjl = data.get('minRjl') +'≤ 容积率 ≤' + data.get('maxRjl')
+            zdh = response.meta['zdh']  # 宗地编号
+            uuid = response.meta['uuid']  # uuid
+            fbsj = response.meta['fbSj']  # 发布时间
+            xzq = data.get('xzqFullName')  # 行政区
+            zdzl = data.get('zdZl')  # 土地坐落
+            tdyt = data.get('tdYt')  # 土地用途
+            crcx = data.get('crNx')  # 出让年限
+            mj = str(data.get('mj')) + '平方米'  # 出让面积
+            citem['xzq'] = xzq
+            citem['zdzl'] = zdzl
+            citem['tdyt'] = tdyt
+            citem['crcx'] = crcx
+            citem['mj'] = mj
+            citem['number'] = zdh
+            citem['pubdate'] = fbsj
+            citem['uuid'] = uuid
 
+            maxRjl = data.get('maxRjl') if data.get('maxRjlTag') else None
+            minRjl = data.get('minRjl') if data.get('minRjlTag') else None
+            rjl = self.msg(n='容积率', n1=maxRjl, n2=minRjl, )
+            citem['rjl'] = rjl
 
-            maxJzMd = data.get('maxJzMd')
-            minJzMd = data.get('minJzMd')
-            jzmd = data.get()
+            maxJzMd = data.get('maxJzMd') if data.get('maxJzMdTag') else None
+            minJzMd = data.get('minJzMd') if data.get('minJzMdTag') else None
+            jzmd = self.msg(n='建筑密度', n1=maxJzMd, n2=minJzMd, n3='%')
+            citem['jzmd'] = jzmd
 
-            gyFs = data.get()
-            tdJb = data.get('tdJb')
-            jzMj = data.get('jzMj')
+            gyfs = data.get('gyFs')  # 供应方式
+            tdjb = data.get('tdJb', '--')  # 土地级别
+            jzmj = data.get('jzMj', '--')  # 建筑面积
+            citem['gyfs'] = gyfs
+            citem['tdjb'] = tdjb
+            citem['jzmj'] = jzmj
 
-            maxLhl = data.get('maxLhl')
-            minLhl = data.get('minLhl')
-            Lhl = ''
+            maxlhl = data.get('maxLhl') if data.get('manLhlTag') else None
+            minlhl = data.get('minLhl') if data.get('minLhlTag') else None
+            lhl = self.msg(n='绿化率', n1=maxlhl, n2=minlhl, n3='%')
+            citem['lhl'] = lhl
 
-            maxJzXg = data.get('maxJzXg')
-            minJzXg = data.get('minJzXg')
-            JzXg = ''
+            maxjzxg = data.get('maxJzXg') if data.get('maxJzXgTag') else None
+            minjzxg = data.get('minJzXg') if data.get('minJzXgTag') else None
+            jzxg = self.msg(n='建筑限高', n1=maxjzxg, n2=minjzxg, n3='米')
+            citem['jzxg'] = jzxg
 
-            bmjz = data.get('tjSqSjE')
-            bmqs = data.get('tjSqSjS')
+            bmjz = data.get('tjSqSjE', '--')  # 报名截止时间
+            bmqs = data.get('tjSqSjS', '--')  # 报名起始时间
+            citem['bmjz'] = process_timestamp(bmjz)
+            citem['bmqs'] = process_timestamp(bmqs)
 
-            zpjz = data.get('gpSjE')
-            zpqs = data.get('gpSjS')
+            zpjz = data.get('gpSjE', '--')  # 招拍挂截止时间
+            zpqs = data.get('gpSjS', '--')  # 招拍挂起始时间
+            citem['zpjz'] = process_timestamp(zpjz)
+            citem['zpqs'] = process_timestamp(zpqs)
 
-            crBzj = data.get('crBzj')
-            jjFd = data.get('jjFd')
-            cjJg = data.get('cjJg')
+            crBzj = data.get('crBzj', '--')  # 竞买保证金 单位：万元
+            citem['crbzj'] = str(crBzj) + '万元' if crBzj and crBzj != '--' else crBzj
 
-            gs_sdate = data.get('gsSjE')
-            gs_edate = data.get('gsSjS')
-            gs_date = '' #成交公示日期
+            qsj = data.get('qsj', '--')  # 起始价
+            qsjDw = data.get('qsjDw')  # 起始价单位：万元
+            citem['qsj'] = str(qsj) + qsjDw if qsj and qsj != '--' else qsj
 
+            jjFd = data.get('jjFd', '--')  # 加价幅度
+            jjfdDw = data.get('jjfdDw')  # 加价幅度单位：万元
+            citem['jjfd'] = str(jjFd) + jjfdDw if jjFd and jjFd != '--' else jjFd
 
-            tzQd = data.get('tzQd') # 投资强度
-            srDw = data.get('srDw') #受让人
+            cjJg = data.get('cjJg', '--')  # 成交价 单位：万元
+            citem['cjjg'] = str(cjJg) + '万元' if cjJg and cjJg != '--' else cjJg
+
+            gs_sdate = data.get('gsSjE', '--')
+            gs_edate = data.get('gsSjS', '--')
+            gs_date = self.msg(n='至', n1=gs_sdate, n2=gs_edate)  # 成交公示日期
+            citem['gsdate'] = gs_date
+
+            tzQd = data.get('tzQd', '--')  # 投资强度 单位：万元/公顷
+            tzQd = '--' if tzQd == 0 else tzQd
+            srDw = data.get('srDw', '--')  # 受让人
+            citem['tzqd'] = str(tzQd) + '万元/公顷' if tzQd and tzQd != '--' else tzQd
+            citem['srdw'] = srDw
+
+            if zdzl is None:
+                print('休息60s')
+                time.sleep(60)
+            else:
+                yield citem
+
+    def msg(self, n, n1, n2, n3=''):
+        n1 = str(n1) if n1 else None
+        n2 = str(n2) if n2 else None
+        obj1 = '≤' + n1 + n3 if n1 else ''
+        obj2 = n2 + n3 + '≤' if n2 else ''
+        obj1 = obj1.replace('≤', '') if '--' in obj1 else obj1
+        obj2 = obj2.replace('≤', '') if '--' in obj2 else obj2
+        obj = obj2 + f' {n} ' + obj1
+        return obj
