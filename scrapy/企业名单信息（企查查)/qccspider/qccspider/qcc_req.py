@@ -2,6 +2,7 @@
 # @Date    : 2022-10-26 17:13
 # @Author  : chenxuepeng
 import copy
+import math
 import json
 import logging
 import os
@@ -14,8 +15,9 @@ from lxml import etree
 from decorator_penr import *
 from qcc_hmac import *
 from useragent import *
-from qccspider.pymysql_connection import *
-from qccspider.redis_conn import *
+from pymysql_connection import *
+from redis_conn import *
+from data_process import *
 
 
 class QccSpider():
@@ -25,6 +27,7 @@ class QccSpider():
         self.logger = self.log()
         self.qcc_item_dict = {
             '企业标签': 'label',
+            'level': 'level',
             '统一社会信用代码': 'credit_code',
             '企业名称': 'name',
             'search_name': 'search_name',
@@ -60,7 +63,7 @@ class QccSpider():
             "User-Agent": self.ua,
         }
 
-        """股权穿透图-headers"""
+        """股东信息-headers"""
         self.headers_data = {
             "content-type": "application/json",
             "cookie": self.open_cookie('cookie_data'),
@@ -77,10 +80,13 @@ class QccSpider():
         headers.update({"cookie": self.open_cookie()})
         condition = True  # False：在企查查中匹配到数据; Ture:在企查查未匹配到数据
         search_id = 1
-        # search_key = '中国融通资产管理集团有限公司'
+        # search_key = '北京神舟航天软件技术股份有限公司'
+        qcc_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, search_key)
+        qcc_uuid = str(qcc_uuid.hex)
         search_key = search_key.replace(' ', '')
+
         print('当前: ', search_key)
-        search_redis = self.redis_conn.find_data(field='qcc', value=search_key)
+        search_redis = self.redis_conn.find_data(field='qcc_data', value=qcc_uuid)
         if search_redis:
             print('已存在, 本次跳过')
         else:
@@ -130,13 +136,13 @@ class QccSpider():
         headers = {}
         headers.update({"User-Agent": get_ua()})
         headers.update({"cookie": self.open_cookie()})
-        print(headers)
+
         qcc_conn = pymysql_connection()
         keyid = re.findall('firm/(.*?)\.html', url)
         keyid = keyid[0] if keyid else keyid
         item = {}
 
-        response = requests.get(url, headers=headers, proxies={'https': 'tps163.kdlapi.com:15818'})
+        response = requests.get(url, headers=headers, proxies={'https': 'tps163.kdlapi.com:15818'}, timeout=3)
         if str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
             raise ValueError('异常访问,访问失败===>>>', url)
         response.encoding = 'utf-8'
@@ -174,7 +180,7 @@ class QccSpider():
 
         sql_key_list = []
         sql_value_list = []
-        item['search_name'] = search_key
+        item['level'] = '1'
 
         for k, v in item.items():
             ak = self.qcc_item_dict.get(k)
@@ -189,26 +195,55 @@ class QccSpider():
         print('获取到工商数据:', sql_key, sql_value)
 
         """股东信息"""
-        shareholder_dict = {}
-        shareholder_list = []
-        shareholder_xpath = "//div[@class='tcaption partner-tcaption']/h3[@class='title']//text()"
-        shareholder = resp.xpath(shareholder_xpath)
-        if shareholder:
-            information_xpath = "//div[@class='tablist'][1]//div[@class='app-tree-table']/table[@class='ntable']/tr/td"
-            information = resp.xpath(information_xpath)
-            for obj in information:
-                obj_name = obj.xpath("//span[@class='name']/a/text()")
-                obj_type = obj.xpath("//table[@class='ntable']/tr/td[@class='center'][1]//text()")
-                obj_ratio = obj.xpath("//table[@class='ntable']/tr/td[@class='center'][2]//text()")
-                obj_number = obj.xpath("//table[@class='ntable']/tr/td[@class='right']//text()")
-                obj_relation = obj.xpath("//table[@class='ntable']/tr/td[@class='left']//text()")
-                shareholder_dict['name'] = obj_name
-                shareholder_dict['type'] = obj_type
-                shareholder_dict['ratio'] = obj_ratio
-                shareholder_dict['number'] = obj_number
-                shareholder_dict['relation'] = obj_relation
-                shareholder_list.append(shareholder_dict)
-            print(shareholder_list)
+        shareholder_x = resp.xpath("//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
+        shareholder_x = ''.join(shareholder_x)
+        shareholder_x = re.sub('\d', '', shareholder_x)
+        if shareholder_x == '股东信息':
+            shareholder_new = resp.xpath("//section[@id='partner']//span[@class='tab-item'][1]//span[@class='item-title']/text()")
+            if shareholder_new:
+                if shareholder_new[0] == '最新公示':
+                    shareholder = self.getshareholder(
+                        url='https://www.qcc.com/api/datalist/partner',
+                        data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi&type=IpoPartners' % keyid,
+                        keyid=keyid,
+                        new=True,
+                    )
+                else:
+                    shareholder = self.getshareholder(
+                        url='https://www.qcc.com/api/datalist/partner',
+                        data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
+                        keyid=keyid,
+                        new=False,
+                    )
+            else:
+                shareholder = self.getshareholder(
+                    url='https://www.qcc.com/api/datalist/partner',
+                    data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
+                    keyid=keyid,
+                    new=False,
+                )
+        else:
+            shareholder = None
+            print('股东信息不存在...', shareholder_x)
+
+        """对外投资outbound"""
+        outbound_x = resp.xpath("//section[@id='touzilist']//h3[@class='title']//text()")
+        outbound_x = ''.join(outbound_x)
+        if outbound_x == '对外投资':
+            outbound = self.getoutbound(
+                url='https://www.qcc.com/api/datalist/touzilist',
+                data='keyNo=%s&pageIndex=1' % keyid,
+                keyid=keyid,
+                pageindex=1,
+                new=True,
+            )
+        else:
+            outbound = None
+            print('对外投资不存在...')
+        qcc_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, item.get('企业名称'))
+        qcc_uuid = str(qcc_uuid.hex)
+        qcc_conn.qcc_insert(key=sql_key, value=sql_value, uuid=qcc_uuid, shareholder=shareholder, investment=outbound)
+        qcc_conn.close()
 
     def log(self):
         os.makedirs('./loging', exist_ok=True)
@@ -232,7 +267,7 @@ class QccSpider():
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"
         }
-        response = requests.get(url=url, headers=headers, proxies={'https': 'tps163.kdlapi.com:15818'})
+        response = requests.get(url=url, headers=headers, proxies={'https': 'tps163.kdlapi.com:15818'}, timeout=1)
         Set_Cookie = response.headers.get('Set-Cookie')
         get_keys = re.findall('(acw_tc|QCCSESSID)(.*?);', Set_Cookie)
         cookies = [''.join(i) for i in get_keys]
@@ -258,105 +293,156 @@ class QccSpider():
         self.i += 1
         return r.get(type)
 
-    def get_hmac(self, keyno=None, tid='a026f74acbc7e5aab3c6d6b42e3547cf'):
+    def get_hmac(self, type=0, keyno=None, tid='c7471078d8d101a605235f57d5887e4d', new=None, pageindex=None):
         """
         :param keyno: 公司唯一标识：b8d99d133f16f34f30f7224145d8ec6f(https://www.qcc.com/firm/b8d99d133f16f34f30f7224145d8ec6f.html)
         :param tid: window.tid
         :return: 0: 股权穿透图子集, 1: 股权穿透图父集
         """
-        k1 = getequityinvestment(keyno, tid)
-        k2 = getownershipstructuremix(keyno, tid)
-        return k1, k2
+        return gethmac(keyno=keyno, tid=tid, new=new, qtypy=type, pageindex=pageindex)
 
     @retry(delay=2, exceptions=True, max_retries=5)
-    def getEquityInvestment(self, url, data, keyid):
-        getcookie = self.get_hmac(keyno=keyid)
-        sonheader = copy.deepcopy(self.headers_data)
-        sonheader.update(getcookie[0])
+    def getshareholder(self, url, data, keyid, new):
+        getcookie = self.get_hmac(type=0, keyno=keyid, new=new)
+        header = copy.deepcopy(self.headers_data)
+        header.update(getcookie)
         item_list = []
-        response = requests.post(url=url, headers=sonheader, data=data)
+        response = requests.get(url=url, headers=header, params=data)
         response.encoding = 'utf-8'
-        print(f'正在获取股权穿透图-子集:{response.status_code}', sonheader['cookie'])
+        code = response.status_code
+        try:
+            datas = response.json().get('data')
+            if datas:
+                print(f'正在获取股东信息:{code}, 数量:', response.json().get('pageInfo').get('total'))
+                for qdata in datas:
+                    item_dict = {}
+                    StockName = qdata.get('StockName', '-')  # 股东及出资信息
+                    ShareType = qdata.get('ShareType', '-')  # 股份类型
+                    ShareType = ShareType if ShareType else ' ShareType'
+                    StockPercent = qdata.get('StockPercent', '-')  # 持股比例
+                    RegistCapi = qdata.get('RegistCapi', '-')  # 认缴出资额(万元)
+                    ShoudDate = qdata.get('ShoudDate', '-')  # 认缴出资日期
+                    FinalBenefitPercent = qdata.get('FinalBenefitPercent', '-')  # 最终受益股份
+                    InDate = qdata.get('InDate', '-')  # 首次持股日期
+                    Name = qdata.get('Product')  # 关联产品/机构
+                    ProductName = Name.get('Name', '-') if Name else '-'  # 关联产品/机构
+                    item_dict['StockName'] = StockName
+                    item_dict['ShareType'] = ShareType
+                    item_dict['StockPercent'] = StockPercent
+                    item_dict['RegistCapi'] = RegistCapi
 
-        """判断为空"""
-
-        Result = response.json().get('Result')
-        Status = response.json().get('Status')
-        if Status == 201:
-            return []
-        else:
-            if Result:
-                EquityShareDetail = Result.get('EquityShareDetail')
-                for k in EquityShareDetail:
-                    item = {}
-                    name = k.get('Name')
-                    level = k.get('Level')
-                    percent = k.get('Percent')
-                    percenttotal = k.get('PercentTotal')
-                    registcapi = k.get('RegistCapi')
-                    shortstatus = k.get('ShortStatus')
-                    shouldcapi = k.get('ShouldCapi')
-
-                    item['name'] = name
-                    item['level'] = level
-                    item['percent'] = percent
-                    item['percenttotal'] = percenttotal
-                    item['registcapi'] = registcapi
-                    item['shortstatus'] = shortstatus
-                    item['shouldcapi'] = shouldcapi
-                    item['org'] = 0
-                    item_list.append(item)
+                    if ',' in ShoudDate:
+                        ShoudDate = ShoudDate.split(',')[-1]
+                    item_dict['ShoudDate'] = ShoudDate
+                    item_dict['FinalBenefitPercent'] = FinalBenefitPercent
+                    item_dict['InDate'] = InDate
+                    item_dict['ProductName'] = ProductName
+                    item_list.append(item_dict)
                 return item_list
-            else:
-                input('数据获取失败')
-                raise ValueError('数据获取失败')
+
+        except Exception as e:
+            if str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
+                print('股东信息获取失败:', code, e)
+                input("\033[1;32m请验证账号\033[0m")
+                raise ValueError("请验证账号")
 
     @retry(delay=2, exceptions=True, max_retries=5)
-    def getOwnershipStructureMix(self, url, data, keyid):
-        getcookie = self.get_hmac(keyno=keyid)
-        fheader = {
-            "content-type": "application/json",
-            "cookie": self.open_cookie('cookie_data'),
-            'user-agent': get_ua(),
-        }
-        fheader.update(getcookie[1])
+    def getoutbound(self, url=None, data=None, keyid=None, new=None, pageindex=None):
+        getcookie = self.get_hmac(type=1, keyno=keyid, pageindex=pageindex)
+        header = copy.deepcopy(self.headers_data)
+        header.update(getcookie)
         item_list = []
-        response = requests.post(url=url, headers=fheader, data=data)
+        response = requests.get(url=url, headers=header, params=data)
         response.encoding = 'utf-8'
-        print(f'正在获取股权穿透图-父集{response.status_code}:', response.text)
+        code = response.status_code
+        try:
+            datas = response.json().get('data')
+            if datas:
+                page = math.ceil(response.json().get('pageInfo').get('total') / 10)
+                print(f'正在获取对外投资信息:{code}, 页数:', page)
+                for qdata in datas:
+                    item_dict = {}
+                    Name = qdata.get('Name', '-')  # 被投资企业名称
+                    Status = qdata.get('Status', '-')  # 状态
+                    FundedRatio = qdata.get('FundedRatio', '-')  # 持股比例
+                    ShouldCapi = qdata.get('ShouldCapi', '-')  # 认缴出资额/持股数
+                    ShouldDate = qdata.get('ShouldDate', '-')  # 认缴出资日期
+                    ProvinceName = qdata.get('ProvinceName', '-')  # 所属省份
+                    IndustryItem = qdata.get('IndustryItem')  # 所属行业
+                    Industry = IndustryItem.get('Industry') if IndustryItem else '-'  # 所属行业
+                    Product = qdata.get('Product')  # 关联产品/机构
+                    ProductName = Product.get('Name') if Product else '-'  # 关联产品/机构
+                    item_dict['Status'] = Status
+                    item_dict['FundedRatio'] = FundedRatio
+                    item_dict['ShouldCapi'] = ShouldCapi
+                    item_dict['ShouldDate'] = ShouldDate
+                    item_dict['ProvinceName'] = ProvinceName
+                    item_dict['Industry'] = Industry
+                    item_dict['ProductName'] = ProductName
+                    item_dict['StockName'] = Name
+                    item_list.append(item_dict)
 
-        """判断为空"""
+                if page > 1:
+                    for i in range(2, page + 1):
+                        print(f'正在抓取第{i}页.')
+                        outbound = self.getoutbound2(
+                            url='https://www.qcc.com/api/datalist/touzilist',
+                            data=f'keyNo=%s&pageIndex={i}' % keyid,
+                            keyid=keyid,
+                            pageindex=i,
+                            new=True,
+                        )
+                        for k in outbound:
+                            item_list.append(k)
+                        time.sleep(1)
 
-        Result = response.json().get('structure')
-        Status = response.json().get('Status')
+                return item_list
 
-        if Result:
-            EquityShareDetail = Result.get('EquityShareDetail')
-            for k in EquityShareDetail:
-                item = {}
-                name = k.get('Name')
-                level = k.get('Level')
-                percent = k.get('Percent')
-                percenttotal = k.get('PercentTotal')
-                registcapi = k.get('RegistCapi')
-                shortstatus = k.get('ShortStatus')
-                shouldcapi = k.get('ShouldCapi')
-                stocktype = k.get('StockType')
+        except Exception as e:
+            if str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
+                print('对外投资失败:', code, e)
+                input("\033[1;33m请验证账号\033[0m")
+                raise ValueError("请验证账号")
 
-                item['name'] = name
-                item['level'] = level
-                item['percent'] = percent
-                item['percenttotal'] = percenttotal
-                item['registcapi'] = registcapi
-                item['shortstatus'] = shortstatus
-                item['shouldcapi'] = shouldcapi
-                item['stocktype'] = stocktype
-                item['org'] = 2
-                item_list.append(item)
-            return item_list
-        else:
-            input('数据获取失败')
-            raise ValueError('数据获取失败')
+    @retry(delay=2, exceptions=True, max_retries=5)
+    def getoutbound2(self, url=None, data=None, keyid=None, new=None, pageindex=None):
+        getcookie = self.get_hmac(type=1, keyno=keyid, pageindex=pageindex)
+        header = copy.deepcopy(self.headers_data)
+        header.update(getcookie)
+        item_list = []
+        response = requests.get(url=url, headers=header, params=data)
+        response.encoding = 'utf-8'
+        code = response.status_code
+        try:
+            datas = response.json().get('data')
+            if datas:
+                for qdata in datas:
+                    item_dict = {}
+                    Name = qdata.get('Name')  # 被投资企业名称
+                    Status = qdata.get('Status')  # 状态
+                    FundedRatio = qdata.get('FundedRatio')  # 持股比例
+                    ShouldCapi = qdata.get('ShouldCapi')  # 认缴出资额/持股数
+                    ShouldDate = qdata.get('ShouldDate')  # 认缴出资日期
+                    ProvinceName = qdata.get('ProvinceName')  # 所属省份
+                    IndustryItem = qdata.get('IndustryItem')  # 所属行业
+                    Industry = IndustryItem.get('Industry') if IndustryItem else '-'  # 所属行业
+                    Product = qdata.get('Product')  # 关联产品/机构
+                    ProductName = Product.get('Name') if Product else '-'  # 关联产品/机构
+                    item_dict['Status'] = Status
+                    item_dict['FundedRatio'] = FundedRatio
+                    item_dict['ShouldCapi'] = ShouldCapi
+                    item_dict['ShouldDate'] = ShouldDate
+                    item_dict['ProvinceName'] = ProvinceName
+                    item_dict['Industry'] = Industry
+                    item_dict['ProductName'] = ProductName
+                    item_dict['StockName'] = Name
+                    item_list.append(item_dict)
+                return item_list
+        except Exception as e:
+            if str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
+                print('对外投资失败:', code, e)
+                input("\033[1;33m请验证账号\033[0m")
+                raise ValueError("请验证账号")
 
 
 class QccXls:
@@ -366,7 +452,7 @@ class QccXls:
     def get_xls_data(self):
         # 打开excel
         wb_list = []
-        wb = xlrd.open_workbook('央企+双百企业名单合集-1114.xls')
+        wb = xlrd.open_workbook('央企+双百+省属企业名单合集-1116.xls')
         # 按工作簿定位工作表
         sh = wb.sheet_by_name('企业名单合集')
         for i in range(sh.nrows):
@@ -398,7 +484,8 @@ class QccXls:
 
 
 if __name__ == '__main__':
+    print('''************请注意更新插入等级关系: item['level']************''')
     q = QccSpider()
-    x = QccXls().get_xls_data2()
+    x = QccXls().get_xls_data()
     for name in x:
         q.start_request(name)

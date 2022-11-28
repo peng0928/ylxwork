@@ -245,13 +245,23 @@ def chinese2digits(value):
 
 ##时间戳->时间
 def process_timestamp(t=None):
-    if len(str(t)) != 10:
-        t = str(t)[:10]
+    if t:
+        if '-' in str(t):
+            if 'T' in str(t):
+                t = re.findall('(.*?)T', t)[0]
+                return t
+            else:
+                return t
+        else:
+            if len(str(t)) != 10:
+                t = str(t)[:10]
+            else:
+                t = t
+            timeArray = time.localtime(int(t))
+            formatTime = time.strftime("%Y-%m-%d", timeArray)
+            return formatTime
     else:
-        t = t
-    timeArray = time.localtime(int(t))
-    formatTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
-    return formatTime
+        return t
 
 
 ##时间->时间戳

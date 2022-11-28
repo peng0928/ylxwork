@@ -1,8 +1,10 @@
-import pymysql
+import pymysql, uuid
 from redis_conn import redis_conn
+
 
 class pymysql_connection():
     """企查查"""
+
     # ssh mysql
     def __init__(self):
         self.host = '10.0.3.109'
@@ -16,67 +18,89 @@ class pymysql_connection():
         self.cursor = self.conn.cursor()
         self.conn_redis = redis_conn()
 
-    def qcc_insert(self, key, value, sonlist, fathlist, redis_name):
+    def qcc_insert(self, key, value, shareholder=None, investment=None, uuid=None):
+        global  shareholder_id, investment_id
         try:
-            qccdata_table = 'buy_business_qccdata'
+            qccdata_table1 = 'buy_business_qccdata'  # 企业名单信息
+            qccdata_table2 = 'buy_business_qcc_investment'  # 对外投资
+            qccdata_table3 = 'buy_business_qcc_shareholderinformation'  # 股东信息
             qcc_business_table = 'buy_business_qccshareholdes'
             if key and value:
-                data_insert_sql = 'insert into %s (%s) values (%s)' % (qccdata_table, key, value)
+                data_insert_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key, value)
                 self.cursor.execute(data_insert_sql)
                 insert_id = self.conn.insert_id()
+                data_insert_sql2 = 'UPDATE %s set pid="%s", end="0", code="%s" where id=%s' % (
+                    qccdata_table1, insert_id, insert_id, insert_id)
+                self.cursor.execute(data_insert_sql2)
                 self.conn.commit()
                 print('工商数据存储成功:', insert_id)
             else:
-                print('工商数据存储失败:',)
+                print('工商数据存储失败:', )
                 insert_id = None
 
             if insert_id:
-                "股权穿透图-子级"
-                if sonlist:
-                    for i in sonlist:
-                        son_k = []
-                        son_v = []
-                        for k, v in i.items():
-                            son_k.append(k)
-                            son_v.append(v)
-                        sql_k = ','.join(son_k)
-                        son_v = ['"' + str(i) + '"' for i in son_v]
-                        sql_v = ','.join(son_v)
-
-                        sql_k += ',pid'
-                        sql_v += ',"%s"' % insert_id
-
-                        son_insert_sql = 'insert into %s (%s) values (%s)' % (qcc_business_table, sql_k, sql_v)
-                        self.cursor.execute(son_insert_sql)
+                "股东信息"
+                if shareholder:
+                    print('\033[1;32m正在插入父公司:\033[0m')
+                    for l in shareholder:
+                        str_k = ''
+                        str_v = ''
+                        """父公司"""
+                        StockName = l.get('StockName')
+                        key1 = 'name, pid, end, level'
+                        value1 = f'"{StockName}"' + f',"{insert_id}","{1}","{2}"'
+                        shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
+                        self.cursor.execute(shareholder_sql)
+                        shareholder_id = self.conn.insert_id()
+                        shareholder_sql2 = 'update %s set code="%s" where id=%s' % (
+                            qccdata_table1, str(insert_id) + '.' + str(shareholder_id), shareholder_id)
+                        self.cursor.execute(shareholder_sql2)
                         self.conn.commit()
-                    print('股权穿透图-子级 存储成功:')
 
-                "股权穿透图-父级"
-                if fathlist:
-                    for i in fathlist:
-                        fath_k = []
-                        fath_v = []
-                        for k, v in i.items():
-                            fath_k.append(k)
-                            fath_v.append(v)
-                        fath_k = ','.join(fath_k)
-                        fath_v = ['"' + str(i) + '"' for i in fath_v]
-                        fath_v = ','.join(fath_v)
-
-                        fath_k += ',pid'
-                        fath_v += ',"%s"' % insert_id
-                        fath_insert_sql = 'insert into %s (%s) values (%s)' % (qcc_business_table, fath_k, fath_v)
-                        self.cursor.execute(fath_insert_sql)
+                        for k, v in l.items():
+                            str_k += f"{k}" + ','
+                            str_v += f'"{v}"' + ','
+                        str_k += 'id'
+                        str_v += f'{shareholder_id}'
+                        shareholder_sql3 = 'insert into %s (%s) values (%s)' % (qccdata_table3, str_k, str_v)
+                        self.cursor.execute(shareholder_sql3)
                         self.conn.commit()
-                    print('股权穿透图-父级 存储成功:')
+                    print('完成插入父公司股东信息')
 
-                self.conn_redis.set_add(field='qcc', value=redis_name)
+                "对外投资"
+                if investment:
+                    print('\033[1;32m正在插入子公司: \033[0m')
+                    for l in investment:
+                        str_k = ''
+                        str_v = ''
+                        StockName = l.get('StockName')
+                        """子公司"""
+                        key1 = 'name, pid, end, level'
+                        value1 = f'"{StockName}"' + f',"{insert_id}","{1}","{0}"'
+                        shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
+                        self.cursor.execute(shareholder_sql)
+                        investment_id = self.conn.insert_id()
+                        investment_sql2 = 'update %s set code="%s" where id=%s' % (
+                            qccdata_table1, str(insert_id) + '.' + str(investment_id), investment_id)
+                        self.cursor.execute(investment_sql2)
+                        self.conn.commit()
+
+                        for k, v in l.items():
+                            str_k += f"{k}" + ','
+                            str_v += f'"{v}"' + ','
+                        str_k += 'id'
+                        str_v += f'{investment_id}'
+                        investment_sql3 = 'insert into %s (%s) values (%s)' % (qccdata_table2, str_k, str_v)
+                        self.cursor.execute(investment_sql3)
+                        self.conn.commit()
+                    print('完成插入')
+
+                self.conn_redis.set_add(value=uuid)
                 print('reids 存储成功:')
 
 
         except Exception as e:
             print(e)
-
 
 
     def close(self):

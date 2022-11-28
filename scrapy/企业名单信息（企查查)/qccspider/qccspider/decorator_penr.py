@@ -23,9 +23,9 @@ def retry(max_retries: int = 3, delay: (int, float) = 0, exceptions: bool = Fals
                 while True:
                     time.sleep(delay)
                     if retry_count < 1:
-                        print('达到最大重试次数, 退出！')
+                        print('\033[1;31m达到最大重试次数, 退出！\033[0m')
                         break
-                    print('正常重试,剩余重试次数:', retry_count - 1)
+                    print('\033[1;31m正常重试,剩余重试次数:\033[0m', retry_count - 1)
 
                     try:
                         result = copy.deepcopy(func(*args, **kwargs))
