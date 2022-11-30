@@ -30,6 +30,7 @@ class QccSpider():
             'level': 'level',
             '统一社会信用代码': 'credit_code',
             '企业名称': 'name',
+            '公司名称': 'name',
             'search_name': 'search_name',
             '负责人': 'legal_representative',
             '法定代表人': 'legal_representative',
@@ -80,7 +81,7 @@ class QccSpider():
         headers.update({"cookie": self.open_cookie()})
         condition = True  # False：在企查查中匹配到数据; Ture:在企查查未匹配到数据
         search_id = 1
-        # search_key = '北京神舟航天软件技术股份有限公司'
+        # search_key = '内蒙古恒基建设工程施工图审查有限公司'
         qcc_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, search_key)
         qcc_uuid = str(qcc_uuid.hex)
         search_key = search_key.replace(' ', '')
@@ -119,7 +120,7 @@ class QccSpider():
                             '''
                             解析字段
                             '''
-                            time.sleep(2)
+                            time.sleep(1)
                             self.cparse(curl, tags, search_key)
                             condition = False
                             print('===========')
@@ -147,7 +148,7 @@ class QccSpider():
             raise ValueError('异常访问,访问失败===>>>', url)
         response.encoding = 'utf-8'
         resp = etree.HTML(response.text)
-        obj = resp.xpath("//div[@class='cominfo-normal']/table/tr")
+        obj = resp.xpath("//div[@class='cominfo-normal']/table/tr|//section[@id='hkregisterinfo']/table[@class='ntable']/tr")
         for i in obj:
             value_list = []
             qcc_key = i.xpath(".//td[@class='tb']")
@@ -195,7 +196,8 @@ class QccSpider():
         print('获取到工商数据:', sql_key, sql_value)
 
         """股东信息"""
-        shareholder_x = resp.xpath("//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
+        shareholder_x = resp.xpath(
+            "//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
         shareholder_x = ''.join(shareholder_x)
         shareholder_x = re.sub('\d', '', shareholder_x)
         if shareholder_x == '股东信息':
@@ -216,19 +218,52 @@ class QccSpider():
                         new=False,
                     )
             else:
-                shareholder = self.getshareholder(
-                    url='https://www.qcc.com/api/datalist/partner',
-                    data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
-                    keyid=keyid,
-                    new=False,
-                )
+                normal = resp.xpath("//th[@class='has-sort-th']//text()")
+                normal = ''.join(normal)
+                if '持股比例' in normal:
+                    shareholder = self.getshareholder(
+                        url='https://www.qcc.com/api/datalist/partner',
+                        data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
+                        keyid=keyid,
+                        new=False,
+                    )
+                else:
+                    normal_list = []
+                    normal_table_list = []
+                    msg_dict = {
+                        '股东(发起人)': 'StockName',
+                        '持股比例': 'StockPercent',
+                        '持股数(股)': 'ShouldCapi',
+                        '公示日期': 'Publicitydate',
+                    }
+                    normal_xpath = "//section[@id='hkpartner']//table[@class='ntable']/tr[position()>1]"
+                    normal_table = resp.xpath("//section[@id='hkpartner']//table[@class='ntable']/tr[position()=1]/th")
+                    for normal_item in normal_table:
+                        normal_table_list.append(''.join(normal_item.xpath('./text()')).strip())
+                    print(normal_table_list)
+                    normal_x = resp.xpath(normal_xpath)
+                    for item2 in normal_x:  # 循环一次为表格一行
+                        normal_dict = {}
+                        normal_x2 = item2.xpath("./td")  # 获取表单td长度
+                        for len_n in range(len(normal_x2)): # 循环每个td
+                            normal_key = msg_dict.get(normal_table_list[len_n])
+                            if normal_key:
+                                normal_text = normal_x2[len_n].xpath(".//text()")  # 数据
+                                normal_dict[normal_key] = ''.join(normal_text).strip()
+                            else:
+                                if normal_table_list[len_n] == '序号':
+                                    pass
+                                else:
+                                    input(f'字段不存在请检查："{normal_table_list[len_n]}"')
+                        normal_list.append(normal_dict)
+                    shareholder = normal_list
         else:
             shareholder = None
             print('股东信息不存在...', shareholder_x)
-
         """对外投资outbound"""
         outbound_x = resp.xpath("//section[@id='touzilist']//h3[@class='title']//text()")
         outbound_x = ''.join(outbound_x)
+        outbound_x = re.sub('\d', '', outbound_x)
         if outbound_x == '对外投资':
             outbound = self.getoutbound(
                 url='https://www.qcc.com/api/datalist/touzilist',
@@ -240,8 +275,12 @@ class QccSpider():
         else:
             outbound = None
             print('对外投资不存在...')
-        qcc_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, item.get('企业名称'))
+
+
+        qcc_uuid = uuid.uuid3(uuid.NAMESPACE_DNS, search_key)
         qcc_uuid = str(qcc_uuid.hex)
+        if shareholder is None and outbound is None:
+            input(f'对外投资， 股东信息都为空，请确定!{url}')
         qcc_conn.qcc_insert(key=sql_key, value=sql_value, uuid=qcc_uuid, shareholder=shareholder, investment=outbound)
         qcc_conn.close()
 
@@ -308,7 +347,6 @@ class QccSpider():
         header.update(getcookie)
         item_list = []
         response = requests.get(url=url, headers=header, params=data)
-        response.encoding = 'utf-8'
         code = response.status_code
         try:
             datas = response.json().get('data')
@@ -318,10 +356,12 @@ class QccSpider():
                     item_dict = {}
                     StockName = qdata.get('StockName', '-')  # 股东及出资信息
                     ShareType = qdata.get('ShareType', '-')  # 股份类型
-                    ShareType = ShareType if ShareType else ' ShareType'
                     StockPercent = qdata.get('StockPercent', '-')  # 持股比例
+                    ShouldCapi = qdata.get('TotalShouldAmount', '-')  # 持股数(股)
                     RegistCapi = qdata.get('RegistCapi', '-')  # 认缴出资额(万元)
                     ShoudDate = qdata.get('ShoudDate', '-')  # 认缴出资日期
+                    ShoudDate = ShoudDate if ShoudDate else '-'
+                    ShoudDate = ShoudDate.split(',')[-1] if ',' in ShoudDate else ShoudDate
                     FinalBenefitPercent = qdata.get('FinalBenefitPercent', '-')  # 最终受益股份
                     InDate = qdata.get('InDate', '-')  # 首次持股日期
                     Name = qdata.get('Product')  # 关联产品/机构
@@ -329,10 +369,8 @@ class QccSpider():
                     item_dict['StockName'] = StockName
                     item_dict['ShareType'] = ShareType
                     item_dict['StockPercent'] = StockPercent
+                    item_dict['ShouldCapi'] = ShouldCapi
                     item_dict['RegistCapi'] = RegistCapi
-
-                    if ',' in ShoudDate:
-                        ShoudDate = ShoudDate.split(',')[-1]
                     item_dict['ShoudDate'] = ShoudDate
                     item_dict['FinalBenefitPercent'] = FinalBenefitPercent
                     item_dict['InDate'] = InDate
@@ -353,7 +391,6 @@ class QccSpider():
         header.update(getcookie)
         item_list = []
         response = requests.get(url=url, headers=header, params=data)
-        response.encoding = 'utf-8'
         code = response.status_code
         try:
             datas = response.json().get('data')

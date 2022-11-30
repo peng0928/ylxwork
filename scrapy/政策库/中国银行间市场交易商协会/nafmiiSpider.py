@@ -19,7 +19,7 @@ class MainSpider(object):
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
             "Connection": "keep-alive",
             "Host": "www.nafmii.org.cn",
-            "Referer": "http: //www.nafmii.org.cn/zlgl/zlcf/zlcfgl/index.html",
+            "Referer": "http: //www.nafmii.org.cn/zlgl/zlcf/zlcfgl/rpc_index.html",
             "Upgrade-Insecure-Requests": "1",
             "User-Agent": get_ua()
         }
