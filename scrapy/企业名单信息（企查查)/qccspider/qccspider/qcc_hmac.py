@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 import execjs
+
 # hmac_demo.py HMAC算法
 # 与hashlib不同之处在于多了key
 
@@ -127,3 +128,4 @@ if __name__ == "__main__":
     # print(k1)
     # print(k2)
     print(gethmac(1, keyno='b4858d5cc72e05c7a1622b2eda293986', pageindex=1, tid='c7471078d8d101a605235f57d5887e4d', new=True))
+    # pass

@@ -28,7 +28,7 @@ o = {
         'n': 20,
     }
 };
-var r = function (e) {
+function r(e) {
 
     for (e.toLowerCase(),
              t = e + e, n = "", i = 0; i < t.length; ++i) {
@@ -39,10 +39,10 @@ var r = function (e) {
     }
     return n
 };
-e = "/api/datalist/touzilist?keyno=abc50fc7ac1d549540f6339b22d60aad&pageindex=4"
+// e = "/api/datalist/touzilist?keyno=abc50fc7ac1d549540f6339b22d60aad&pageindex=4"
 //父级 '/api/charts/getownershipstructuremix{"keyno":"8c9f7ddc1a7bcee3d1f7676773fe9404","level":1}'
 //父级 '/api/charts/getownershipstructuremixpathString{"keyno":"8c9f7ddc1a7bcee3d1f7676773fe9404","level":1}a2f9c4e1d81e4887c0e08ff013acf07f'
-aaa = r(e);
-console.log('touzilist:',aaa);
+
+// console.log('touzilist:', r(e));
 
 

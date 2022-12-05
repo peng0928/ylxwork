@@ -28,7 +28,7 @@ o = {
         'n': 20,
     }
 };
-var r = function (e) {
+function r(e) {
 
     for (e.toLowerCase(),
              t = e + e, n = "", i = 0; i < t.length; ++i) {

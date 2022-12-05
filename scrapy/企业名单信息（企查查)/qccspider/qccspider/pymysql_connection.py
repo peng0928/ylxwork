@@ -18,7 +18,8 @@ class pymysql_connection():
         self.cursor = self.conn.cursor()
         self.conn_redis = redis_conn()
 
-    def qcc_insert(self, key, value, shareholder=None, investment=None, uuid=None):
+    def qcc_insert(self, key, value, shareholder=None, investment=None, uuid=None, type=None):
+        type = type
         global  shareholder_id, investment_id
         try:
             qccdata_table1 = 'buy_business_qccdata'  # 企业名单信息
@@ -47,8 +48,8 @@ class pymysql_connection():
                         str_v = ''
                         """父公司"""
                         StockName = l.get('StockName')
-                        key1 = 'name, pid, end, level'
-                        value1 = f'"{StockName}"' + f',"{insert_id}","{1}","{2}"'
+                        key1 = 'name, pid, end, level, type'
+                        value1 = f'"{StockName}"' + f',"{insert_id}","{1}","{2}","{type}"'
                         shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                         self.cursor.execute(shareholder_sql)
                         shareholder_id = self.conn.insert_id()
@@ -75,8 +76,8 @@ class pymysql_connection():
                         str_v = ''
                         StockName = l.get('StockName')
                         """子公司"""
-                        key1 = 'name, pid, end, level'
-                        value1 = f'"{StockName}"' + f',"{insert_id}","{1}","{0}"'
+                        key1 = 'name, pid, end, level, type'
+                        value1 = f'"{StockName}"' + f',"{insert_id}","{1}","{0}", "{type}"'
                         shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                         self.cursor.execute(shareholder_sql)
                         investment_id = self.conn.insert_id()
