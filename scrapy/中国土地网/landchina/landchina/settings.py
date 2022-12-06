@@ -50,7 +50,7 @@ DOWNLOAD_DELAY = 3
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-   'landchina.proxy01.ProxyMiddleware': 500,
+   'landchina.proxy01.ProxyMiddleware': 100,
 }
 
 # Enable or disable extensions

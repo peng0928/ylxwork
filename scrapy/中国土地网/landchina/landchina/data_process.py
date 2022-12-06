@@ -258,7 +258,7 @@ def process_timestamp(t=None):
             else:
                 t = t
             timeArray = time.localtime(int(t))
-            formatTime = time.strftime("%Y-%m-%d", timeArray)
+            formatTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
             return formatTime
     else:
         return t

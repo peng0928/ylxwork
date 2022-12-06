@@ -9,18 +9,25 @@ class SpiderSpider(scrapy.Spider):
     """中国土地市场网"""
     name = "spider"
     starturl = "https://api.landchina.com/tGyggZd/transfer/list"
-    headers = {'Content-Type': 'application/json'}
+    headers = {
+        "Content-Type": "application/json",
+        "Hash": "c8d93e43c5c8a0cdea12496e81e155cd3aff48b7ddb248128911bde975498a35",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+        }
     start_time = "2022-01-01 00:00:00"
     end_time = f"{get_datetime_now()} 23:59:59"
-    req_data = '{"pageNum": 1, "pageSize": 10, "tdYt": "07", "startDate": "%s", "endDate": "%s"}' % (
+    req_data = '{"pageNum": 1, "pageSize": 10, "startDate": "%s", "endDate": "%s"}' % (
         start_time, end_time)
 
     def start_requests(self):
         ii = int(input(':'))
-        for i in range(ii, 2173):
+
+        for i in range(ii, 8651):
             data = self.req_data.replace('pageNum": 1', f'pageNum": {i}')
+            print(data)
             yield scrapy.Request(url=self.starturl, method='POST', headers=self.headers, body=data, meta={"page": i},
-                                 callback=self.lparse)
+                                 callback=self.lparse
+                                 )
 
     def get_page(self, response):
         obj = response.json()
@@ -41,7 +48,7 @@ class SpiderSpider(scrapy.Spider):
         obj = response.json()
         data = obj.get('data')
         total = data.get('total')
-        if total < 30000:
+        if total < 86508:
             print(data)
             if data:
                 list = data.get('list')
@@ -79,10 +86,9 @@ class SpiderSpider(scrapy.Spider):
                     else:
                         print('已存在', item_uuid)
         else:
-            print('error')
+            print('休息60s')
             time.sleep(60)
-            with open('./1.txt', 'a')as f:
-                f.write(str(response.meta['page']) + '\n')
+            raise ValueError('休息60s')
 
     def cparse(self, response):
         data = response.json().get('data')
@@ -95,7 +101,7 @@ class SpiderSpider(scrapy.Spider):
             zdzl = data.get('zdZl')  # 土地坐落
             tdyt = data.get('tdYt')  # 土地用途
             crcx = data.get('crNx')  # 出让年限
-            mj = str(data.get('mj')) + '平方米'  # 出让面积
+            mj = str(data.get('mj'))  # 出让面积
             citem['xzq'] = xzq
             citem['zdzl'] = zdzl
             citem['tdyt'] = tdyt
@@ -143,34 +149,41 @@ class SpiderSpider(scrapy.Spider):
             citem['zpqs'] = process_timestamp(zpqs)
 
             crBzj = data.get('crBzj', '--')  # 竞买保证金 单位：万元
-            citem['crbzj'] = str(crBzj) + '万元' if crBzj and crBzj != '--' else crBzj
+            citem['crbzj'] = str(crBzj) if crBzj and crBzj != '--' else crBzj
 
             qsj = data.get('qsj', '--')  # 起始价
             qsjDw = data.get('qsjDw')  # 起始价单位：万元
-            citem['qsj'] = str(qsj) + qsjDw if qsj and qsj != '--' else qsj
+            citem['qsj'] = str(qsj) if qsj and qsj != '--' else qsj
 
             jjFd = data.get('jjFd', '--')  # 加价幅度
             jjfdDw = data.get('jjfdDw')  # 加价幅度单位：万元
-            citem['jjfd'] = str(jjFd) + jjfdDw if jjFd and jjFd != '--' else jjFd
+            citem['jjfd'] = str(jjFd) if jjFd and jjFd != '--' else jjFd
 
             cjJg = data.get('cjJg', '--')  # 成交价 单位：万元
-            citem['cjjg'] = str(cjJg) + '万元' if cjJg and cjJg != '--' else cjJg
+            citem['cjjg'] = str(cjJg) if cjJg and cjJg != '--' else cjJg
 
             gs_sdate = data.get('gsSjE', '--')
             gs_edate = data.get('gsSjS', '--')
-            gs_date = self.msg(n='至', n1=gs_sdate, n2=gs_edate)  # 成交公示日期
+            gs_date = gs_edate  # 成交公示日期
             citem['gsdate'] = gs_date
 
             tzQd = data.get('tzQd', '--')  # 投资强度 单位：万元/公顷
             tzQd = '--' if tzQd == 0 else tzQd
             srDw = data.get('srDw', '--')  # 受让人
-            citem['tzqd'] = str(tzQd) + '万元/公顷' if tzQd and tzQd != '--' else tzQd
+            citem['tzqd'] = str(tzQd) if tzQd and tzQd != '--' else tzQd
             citem['srdw'] = srDw
+            try:
+                citem['price'] = '%.2f'%(cjJg/jzmj)
+            except:
+                pass
 
             if zdzl is None:
                 print('休息60s')
                 time.sleep(60)
+                raise ValueError('休息60s')
             else:
+                # pass
+                # print(citem)
                 yield citem
 
     def msg(self, n, n1, n2, n3=''):

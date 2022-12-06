@@ -1,5 +1,6 @@
-import pymysql, copy
-from .redis_conn import redis_conn
+import pymysql, copy, re
+from landchina.redis_conn import redis_conn
+from landchina.data_process import *
 
 
 class pymysql_connection():
@@ -78,3 +79,60 @@ class pymysql_connection():
     def __del__(self):
         self.cursor.close()
         self.conn.close()
+
+    def select_value(self):
+        sql = '''select id,gsdate from buy_estate_market'''
+        self.cursor.execute(sql)
+        fetchall = self.cursor.fetchall()
+        for all in fetchall:
+            id = all[0]
+            gsdate = all[1]
+
+            gsdate = gsdate.split('≤')[-1]
+            usql = 'update buy_estate_market set gsdate="%s" where id=%s' % (gsdate, id)
+            self.cursor.execute(usql)
+            self.conn.commit()
+            print(id, usql)
+
+    def update_value(self):
+        sql = '''select id,mj,crbzj,qsj,jjfd,cjjg,tzqd from buy_estate_market'''
+        self.cursor.execute(sql)
+        fetchall = self.cursor.fetchall()
+        for all in fetchall:
+            id = all[0]
+            mj = all[1].replace('平方米', '')
+            crbzj = all[2].replace('万元', '')
+            qsj = all[3].replace('万元', '')
+            jjfd = all[4].replace('万元', '')
+            cjjg = all[5].replace('万元', '')
+            tzqd = all[5].replace('万元/公顷', '')
+
+            usql = 'update buy_estate_market set mj="%s",tzqd="%s", crbzj="%s", qsj="%s", jjfd="%s", cjjg="%s" ' \
+                   ' where id=%s' % (mj, tzqd, crbzj, qsj, jjfd, cjjg, id)
+            self.cursor.execute(usql)
+            self.conn.commit()
+            print(usql)
+
+    def update_deal(self):
+        sql = '''select id,jzmj,cjjg from buy_estate_market'''
+        self.cursor.execute(sql)
+        fetchall = self.cursor.fetchall()
+        for all in fetchall:
+            id = all[0]
+            jzmj = all[1]
+            cjjg = all[2]
+            try:
+                jzmj = float(jzmj)
+                cjjg = float(cjjg)
+                usql = 'update buy_estate_market set price="%.2f" where id=%s' % (cjjg/jzmj, id)
+                self.cursor.execute(usql)
+                self.conn.commit()
+                print(usql)
+
+            except:
+                pass
+
+
+if __name__ == '__main__':
+    p = pymysql_connection().update_deal()
+    print(p)
