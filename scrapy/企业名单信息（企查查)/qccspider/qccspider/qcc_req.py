@@ -149,7 +149,8 @@ class QccSpider():
         else:
             response.encoding = 'utf-8'
             resp = etree.HTML(response.text)
-            obj = resp.xpath("//div[@class='cominfo-normal']/table/tr|//section[@id='hkregisterinfo']/table[@class='ntable']/tr")
+            obj = resp.xpath(
+                "//div[@class='cominfo-normal']/table/tr|//section[@id='hkregisterinfo']/table[@class='ntable']/tr")
             for i in obj:
                 value_list = []
                 qcc_key = i.xpath(".//td[@class='tb']")
@@ -198,11 +199,13 @@ class QccSpider():
             print('获取到工商数据:', keyid)
 
             """股东信息"""
-            shareholder_x = resp.xpath("//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
+            shareholder_x = resp.xpath(
+                "//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
             shareholder_x = ''.join(shareholder_x)
             shareholder_x = re.sub('\d', '', shareholder_x)
             if shareholder_x == '股东信息':
-                shareholder_new = resp.xpath("//section[@id='partner']//span[@class='tab-item'][1]//span[@class='item-title']/text()")
+                shareholder_new = resp.xpath(
+                    "//section[@id='partner']//span[@class='tab-item'][1]//span[@class='item-title']/text()")
                 if shareholder_new:
                     if shareholder_new[0] == '最新公示':
                         shareholder = self.getshareholder(
@@ -238,7 +241,8 @@ class QccSpider():
                             '公示日期': 'Publicitydate',
                         }
                         normal_xpath = "//section[@id='hkpartner']//table[@class='ntable']/tr[position()>1]"
-                        normal_table = resp.xpath("//section[@id='hkpartner']//table[@class='ntable']/tr[position()=1]/th")
+                        normal_table = resp.xpath(
+                            "//section[@id='hkpartner']//table[@class='ntable']/tr[position()=1]/th")
                         for normal_item in normal_table:
                             normal_table_list.append(''.join(normal_item.xpath('./text()')).strip())
                         print(normal_table_list)
@@ -246,7 +250,7 @@ class QccSpider():
                         for item2 in normal_x:  # 循环一次为表格一行
                             normal_dict = {}
                             normal_x2 = item2.xpath("./td")  # 获取表单td长度
-                            for len_n in range(len(normal_x2)): # 循环每个td
+                            for len_n in range(len(normal_x2)):  # 循环每个td
                                 normal_key = msg_dict.get(normal_table_list[len_n])
                                 if normal_key:
                                     normal_text = normal_x2[len_n].xpath(".//text()")  # 数据
@@ -277,11 +281,11 @@ class QccSpider():
                 outbound = None
                 print('对外投资不存在...')
 
-
             qcc_uuid = search_key
             if shareholder is None and outbound is None:
                 input(f'对外投资， 股东信息都为空，请确定!{url}')
-            qcc_conn.qcc_insert(key=sql_key, value=sql_value, uuid=qcc_uuid, shareholder=shareholder, investment=outbound, type=self.type)
+            qcc_conn.qcc_insert(key=sql_key, value=sql_value, uuid=qcc_uuid, shareholder=shareholder,
+                                investment=outbound, type=self.type)
             qcc_conn.close()
 
     def log(self):
@@ -521,6 +525,7 @@ class QccXls:
         return wb_list
 
     """发债主体代码"""
+
     def get_xls_data3(self):
         # 打开excel
         wb_list = []
@@ -537,11 +542,44 @@ class QccXls:
                     wb_list.append(data)
         return wb_list
 
+    """汽车类上市公司"""
+
+    def get_xls_data4(self):
+        self.host = '10.0.3.109'
+        self.port = 3356
+        self.user = 'root'
+        self.password = 'Windows!@#'
+        self.db = 'ubk_plugin'
+        # self.db = 'daily_work'
+        self.conn = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password,
+                                    database=self.db)
+        self.cursor = self.conn.cursor()
+        # 打开excel
+        wb_list = []
+        wb = xlrd.open_workbook('汽车类上市公司.xls')
+        # 按工作簿定位工作表
+        sheetname = ['Sheet1']
+        for name in sheetname:
+            sh = wb.sheet_by_name(name)
+            for i in range(sh.nrows):
+                if i < 1:
+                    pass
+                else:
+                    data = sh.row_values(i)[1]
+                    sql = 'select gsmc from etm_jbzl where agjc = "%s"' % data
+                    self.cursor.execute(sql)
+                    result = self.cursor.fetchone()
+                    if result:
+                        wb_list.append(result[0])
+                    else:
+                        wb_list.append(data)
+
+        return wb_list
+
 
 if __name__ == '__main__':
     print('''************请注意更新插入等级关系: item['level'] , type************''')
-    q = QccSpider(type=2)
-    x = QccXls().get_xls_data3()
+    q = QccSpider(type=3)
+    x = QccXls().get_xls_data4()
     for name in x:
-    #     print(name)
         q.start_request(name)

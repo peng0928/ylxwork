@@ -38,7 +38,7 @@ class Spider:
         data = obj.get('data')
         total = data.get('total')
         item = {}
-        if total < 86508:
+        if total < 90000:
             if data:
                 list = data.get('list')
                 for i in list:
@@ -76,6 +76,7 @@ class Spider:
 
 
         else:
+            print(total)
             raise ValueError('列表访问失败')
 
     @retry(exceptions=True, max_retries=8, delay=3)
