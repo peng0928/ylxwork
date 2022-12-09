@@ -76,6 +76,8 @@ class QccSpider():
 
     @retry(exceptions=True, max_retries=10)
     def start_request(self, search_key):
+        self.notfound = {}
+        self.nottag = []
         '''数据查询去重-去除重复采购单位'''
         headers = {}
         headers.update({"User-Agent": get_ua()})
@@ -104,18 +106,25 @@ class QccSpider():
                 print(200, search_id, search_url)
                 tree = etree.HTML(response.text)
                 maininfo = tree.xpath("//div[@class='maininfo']")
+                numi = 0
                 for item in maininfo:
                     if condition is True:
                         company_names = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']//text()")
                         company_names = ''.join(company_names)
                         cc = opencc.OpenCC('t2s')
                         company_name = cc.convert(company_names.replace('（', '(').replace('）', ')'))
-                        print(company_name, search_key)
+                        curl = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']/@href")[0]
+                        tags = item.xpath(".//span[@class='search-tags']/span[@class='m-r-sm']/span/text()")
+                        tags = [i.strip() for i in tags]
+                        tags = ','.join(tags)
+                        numi += 1
+                        print(numi, company_name, search_key)
+                        d = {
+                        company_name: curl
+                        }
+                        self.notfound[numi] = d
+                        self.nottag.append(tags)
                         if company_name == search_key:
-                            curl = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']/@href")[0]
-                            tags = item.xpath(".//span[@class='search-tags']/span[@class='m-r-sm']/span/text()")
-                            tags = [i.strip() for i in tags]
-                            tags = ','.join(tags)
                             '''
                             解析字段
                             '''
@@ -128,8 +137,14 @@ class QccSpider():
 
                 '''企查查未找到'''
                 if condition is True:
-                    print('Not Found')
-                    self.logger.info(f'Not Found:名称 {search_key}')
+                    print(self.notfound)
+                    sinput = 'q'
+                    if sinput != 'q':
+                        sname = self.notfound.get(int(sinput))
+                        for k,v in sname.items():
+                            self.cparse(v, self.nottag[int(sinput)], search_key)
+                    else:
+                        self.logger.info(f'Not Found:名称 {search_key}')
 
     @retry(exceptions=True, max_retries=10)
     def cparse(self, url, tags, search_key):
@@ -542,7 +557,7 @@ class QccXls:
                     wb_list.append(data)
         return wb_list
 
-    """汽车类上市公司"""
+    """汽车类上市公司3"""
 
     def get_xls_data4(self):
         self.host = '10.0.3.109'
@@ -579,7 +594,7 @@ class QccXls:
 
 if __name__ == '__main__':
     print('''************请注意更新插入等级关系: item['level'] , type************''')
-    q = QccSpider(type=3)
-    x = QccXls().get_xls_data4()
+    q = QccSpider(type=2)
+    x = QccXls().get_xls_data3()
     for name in x:
         q.start_request(name)
