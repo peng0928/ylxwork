@@ -25,7 +25,7 @@ class pymysql_connection():
             print(f'正在插入mysql数据库:', timestamp)
 
             for k, v in fields.items():
-                sql = 'insert into buy_estate_market (attribute_id,buy_value,data_id) ' \
+                sql = 'insert into buy_estate_market_new (attribute_id,buy_value,data_id) ' \
                       'values ("%s","%s","%s")' % (k, v, timestamp)
                 try:
                     self.cursor.execute(sql)
@@ -35,14 +35,12 @@ class pymysql_connection():
             print(f'完成插入mysql数据库:', timestamp)
             ###################################################
             conn_redis = redis_conn(db=8)
-            conn_redis.set_add('buy_estate_market', value=uuid)
+            conn_redis.set_add('buy_estate_market_new', value=uuid)
             self.cursor.close()
             self.conn.close()
             print('正在插入redis数据库:', uuid)
         else:
             print('已存在:', )
-
-
 
     def select_value(self):
         sql = '''select id,gsdate from buy_estate_market'''
@@ -96,7 +94,27 @@ class pymysql_connection():
             except:
                 pass
 
+    def dataid(self):
+        import xlwt
+        workbook = xlwt.Workbook()
+        worksheet = workbook.add_sheet('sheet1')
+        sql1 = 'SELECT DISTINCT data_id FROM buy_estate_market_new'
+        self.cursor.execute(sql1)
+        r1 = self.cursor.fetchall()[:]
+        n2 = 0
+        for i in r1:
+            self.cursor.execute('SELECT * from buy_estate_market_new where data_id=%s'%i[0])
+            r2 = self.cursor.fetchall()
+
+            n1 = -1
+            n2 += 1
+            for j in r2:
+                n1 += 1
+                print(n1, n2, j[2])
+                worksheet.write(n2, n1, j[2])
+            workbook.save('./中国土地网12-26.xls')
+
 
 if __name__ == '__main__':
-    p = pymysql_connection().update_deal()
+    p = pymysql_connection().dataid()
     print(p)
