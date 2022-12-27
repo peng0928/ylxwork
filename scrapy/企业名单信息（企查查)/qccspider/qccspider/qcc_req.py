@@ -110,7 +110,7 @@ class QccSpider():
                     if condition is True:
                         company_names = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']//text()")
                         company_names = ''.join(company_names)
-                        cc = opencc.OpenCC('t2s')
+                        # cc = opencc.OpenCC('t2s')
                         # company_name = cc.convert(company_names.replace('（', '(').replace('）', ')')) # 企业名称：繁体转简体
                         company_name = (company_names.replace('（', '(').replace('）', ')'))
                         curl = item.xpath(".//span[@class='copy-title']/a[@class='title copy-value']/@href")[0]
