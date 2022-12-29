@@ -19,8 +19,8 @@ def copy_file(area, projectName):
 
 
 if __name__ == '__main__':
-    area = '中国土地网'
-    projectName = 'landchina'
+    area = 'test'
+    projectName = 'test01'
     projectName = projectName.replace('.', '_').replace('-', '_')
     scrapy_file(area, projectName)
     print(projectName)

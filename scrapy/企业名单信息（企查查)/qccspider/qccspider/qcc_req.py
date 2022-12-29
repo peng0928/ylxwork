@@ -676,6 +676,7 @@ if __name__ == '__main__':
     print('''************请注意更新插入等级关系: item['level'] , type************''')
     type = '3'
     level = '0'
+
     x = QccXls().up2(type=type, level=level)
     # q = QccSpider(type=type)
     # for name in x:

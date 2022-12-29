@@ -1,7 +1,8 @@
 import time
-from winproxy import ProxySetting
-p = ProxySetting()
+
 def set_proxy():
+    from winproxy import ProxySetting
+    p = ProxySetting()
     """设置系统代理"""
     p.enable = True
     proxy = 'tps163.kdlapi.com:15818'
@@ -11,6 +12,8 @@ def set_proxy():
 
 def close_proxy():
     """关闭系统代理"""
+    from winproxy import ProxySetting
+    p = ProxySetting()
     p.enable = False
     p.registry_write()
 
