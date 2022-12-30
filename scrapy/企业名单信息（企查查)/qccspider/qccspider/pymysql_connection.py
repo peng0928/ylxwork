@@ -103,7 +103,7 @@ class pymysql_connection():
         except Exception as e:
             print(e)
 
-    def qcc_insert2(self, litem, ids=None, code=None, investment=None, type=None):
+    def qcc_insert2(self, litem, ids=None, code=None, investment=None, type=None, level=None):
         type = type
         end = '0' if investment else '1'
         global shareholder_id, investment_id
@@ -126,7 +126,7 @@ class pymysql_connection():
                     StockName = l.get('StockName')
                     """子公司"""
                     key1 = 'name, pid, end, level, type'
-                    value1 = f'"{StockName}"' + f',"{ids}","{1}","{-1}", "{type}"'
+                    value1 = f'"{StockName}"' + f',"{ids}","{1}","{int(level)-1}", "{type}"'
                     shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                     self.cursor.execute(shareholder_sql)
                     investment_id = self.conn.insert_id()

@@ -310,8 +310,9 @@ class QccSpider():
                 print(f'对外投资， 股东信息都为空，请确定!',url)
                 outbound = None
 
+
             qcc_conn.qcc_insert2(litem=ilist,ids=id,code=code,
-                                investment=outbound, type=self.type)
+                                investment=outbound, type=self.type, level=self.level)
             qcc_conn.close()
 
     def log(self):
@@ -662,7 +663,29 @@ class QccXls:
         self.cursor = self.conn.cursor()
         q = QccSpider(type=type, level=level)
 
-        sql01 = f'select * from buy_business_qccdata where type={type} and level=0 and end=1'
+        sql01 = f'select * from buy_business_qccdata where type={type} and level=0 and end=1 and pageurl is null'
+        self.cursor.execute(sql01)
+        r1 = self.cursor.fetchall()
+        for i in r1:
+            print(i)
+            name = i[8].replace('（', '(').replace('）', ')')
+            id = i[0]
+            code = i[1]
+            q.start_request(search_key=name, id=id, code=code)
+
+    def up3(self, type, level):
+        self.host = '10.0.3.109'
+        self.port = 3356
+        self.user = 'root'
+        self.password = 'Windows!@#'
+        self.db = 'ubk_plugin'
+        # self.db = 'daily_work'
+        self.conn = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password,
+                                    database=self.db)
+        self.cursor = self.conn.cursor()
+        q = QccSpider(type=type, level=level)
+
+        sql01 = f'select * from buy_business_qccdata where type={type} and level=-1 and end=1 and pageurl is null'
         self.cursor.execute(sql01)
         r1 = self.cursor.fetchall()
         for i in r1:
