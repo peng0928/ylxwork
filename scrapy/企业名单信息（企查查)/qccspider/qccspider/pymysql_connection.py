@@ -12,7 +12,6 @@ class pymysql_connection():
         self.user = 'root'
         self.password = 'Windows!@#'
         self.db = 'ubk_plugin'
-        # self.db = 'daily_work'
         self.conn = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password,
                                     database=self.db)
         self.cursor = self.conn.cursor()
