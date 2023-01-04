@@ -86,8 +86,8 @@ class QccSpider():
         search_key = search_key.replace(' ', '')
 
         print('当前: ', search_key)
-        # search_redis = self.redis_conn.find_data(field='qcc_data', value=search_key)
-        search_redis = False
+        search_redis = self.redis_conn.find_data(field='qcc_data', value=search_key)
+        # search_redis = False
         if search_redis:
             print('已存在, 本次跳过')
         else:
@@ -312,7 +312,7 @@ class QccSpider():
 
 
             qcc_conn.qcc_insert2(litem=ilist,ids=id,code=code,
-                                investment=outbound, type=self.type, level=self.level)
+                                investment=outbound, type=self.type, level=self.level, nuuid=search_key)
             qcc_conn.close()
 
     def log(self):
@@ -690,7 +690,7 @@ class QccXls:
         r1 = self.cursor.fetchall()
         for i in r1:
             print(i)
-            name = i[8].replace('（', '(').replace('）', ')')
+            name = i[7].replace('（', '(').replace('）', ')')
             id = i[0]
             code = i[1]
             q.start_request(search_key=name, id=id, code=code)

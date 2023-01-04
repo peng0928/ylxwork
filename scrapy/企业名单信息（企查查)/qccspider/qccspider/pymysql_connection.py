@@ -32,6 +32,8 @@ class pymysql_connection():
                 data_insert_sql2 = 'UPDATE %s set pid="%s", end="0", code="%s" where id=%s' % (
                     qccdata_table1, insert_id, insert_id, insert_id)
                 self.cursor.execute(data_insert_sql2)
+                pid = self.conn.insert_id()
+
                 self.conn.commit()
                 print('工商数据存储成功:', insert_id)
             else:
@@ -63,8 +65,10 @@ class pymysql_connection():
                         str_k += 'id'
                         str_v += f'{shareholder_id}'
                         shareholder_sql3 = 'insert into %s (%s) values (%s)' % (qccdata_table3, str_k, str_v)
+
                         self.cursor.execute(shareholder_sql3)
                         self.conn.commit()
+                        self.cursor.execute('insert into buy_business_qccdata_rel (cid, pid) values (%s, %s)' % (shareholder_id, pid))
                     print('完成插入父公司股东信息')
 
                 "对外投资"
@@ -102,10 +106,10 @@ class pymysql_connection():
         except Exception as e:
             print(e)
 
-    def qcc_insert2(self, litem, ids=None, code=None, investment=None, type=None, level=None):
+    def qcc_insert2(self, litem, ids=None, code=None, investment=None, type=None, level=None, nuuid=None):
         type = type
         end = '0' if investment else '1'
-        global shareholder_id, investment_id
+        global investment_id
         try:
             qccdata_table1 = 'buy_business_qccdata'  # 企业名单信息
             qccdata_table2 = 'buy_business_qcc_investment'  # 对外投资
@@ -113,10 +117,11 @@ class pymysql_connection():
                 litem = litem + f', end={end}'
                 data_insert_sql2 = 'UPDATE %s set %s where id=%s' % (qccdata_table1, litem, ids)
                 self.cursor.execute(data_insert_sql2)
-                self.conn.commit()
+                # self.conn.commit()
             else:
                 print('工商数据存储失败:', )
                 "对外投资"
+
             if investment:
                 print('\033[1;32m正在插入子公司: \033[0m')
                 for l in investment:
@@ -129,10 +134,10 @@ class pymysql_connection():
                     shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                     self.cursor.execute(shareholder_sql)
                     investment_id = self.conn.insert_id()
-                    investment_sql2 = 'update %s set code="%s" where id=%s' % (
-                        qccdata_table1, str(code) + '.' + str(investment_id), investment_id)
-                    self.cursor.execute(investment_sql2)
-                    self.conn.commit()
+                    # investment_sql2 = 'update %s set code="%s" where id="%s"' % (
+                    #     qccdata_table1, str(code) + '.' + str(investment_id), investment_id)
+                    # self.cursor.execute(investment_sql2)
+                    # self.conn.commit()
 
                     for k, v in l.items():
                         str_k += f"{k}" + ','
@@ -141,11 +146,14 @@ class pymysql_connection():
                     str_v += f'{investment_id}'
                     investment_sql3 = 'insert into %s (%s) values (%s)' % (qccdata_table2, str_k, str_v)
                     self.cursor.execute(investment_sql3)
-                    self.conn.commit()
-                print('完成插入')
+                    # self.conn.commit()
 
-                self.conn_redis.set_add(value=uuid)
+                    self.cursor.execute('insert into buy_business_qccdata_rel (cid, pid) values ("%s", "%s")' % (investment_id, ids))
+                    self.conn.commit()
+
+                self.conn_redis.set_add(value=nuuid)
                 print('reids 存储成功:')
+
         except Exception as e:
             print(e)
 
@@ -155,7 +163,7 @@ class pymysql_connection():
         getres = self.cursor.fetchall()
         for item in getres:
             ids = item[0]
-            isql = 'insert into buy_business_qcc_enterprisetype_qccdata (enterprisetypeid,dataid) values (%s,%s)' % (
+            isql = 'insert into buy_business_qcc_enterprisetype_qccdata (enterprisetypeid,dataid) values ("%s","%s")' % (
             1, ids)
             self.cursor.execute(isql)
             self.conn.commit()
