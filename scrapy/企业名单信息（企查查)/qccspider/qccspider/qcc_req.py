@@ -899,10 +899,10 @@ class QccXls:
                     res2[0] = '当前公司'
                     res2[1] = res2[7]
                     print('当前: ', res[7], res[4], res[0])
-                    # for i in range(len(res2)):
-                    #     sh1.write(xlnum, i, res2[i])
-                    # xlnum += 1
-                    # book.save('./汽车类上市公司/gx2.xls')
+                    for i in range(len(res2)):
+                        sh1.write(xlnum, i, res2[i])
+                    xlnum += 2
+                    book.save('./汽车类上市公司/gxtest.xls')
                     s.mains(pageurl=str(res[4]), ids=res[0], name=res[7])
                     reslist = (list(res))
                     id = reslist[0]
@@ -934,10 +934,10 @@ class QccXls:
                                             sonres[0] = '子公司'
                                             sonres[1] = sonres[7]
                                             s.mains(pageurl=sonpageurl, ids=sonid, name=sonname)
-                                            # for i in range(len(sonres)):
-                                            #     sh1.write(xlnum, i, sonres[i])
-                                            # xlnum += 1
-                                            # book.save('./汽车类上市公司/gx2.xls')
+                                            for i in range(len(sonres)):
+                                                sh1.write(xlnum, i, sonres[i])
+                                            xlnum += 1
+                                            book.save('./汽车类上市公司/gxtest.xls')
                                             if not sonpageurl:
                                                 print('子公司数据不完全: ', res)
                                                 q = QccSpider(type=sontypes, level=sonlevel)
@@ -956,8 +956,8 @@ class QccXls:
                                                     sunidname = sundata[7]
                                                     if not sunidpageurl:
                                                         print('孙公司数据不完全: ', sundata)
-                                                        q = QccSpider(type=sunidtypes, level=sunidlevel)
-                                                        q.start_request(search_key=sunidname, id=sunid)
+                                                        # q = QccSpider(type=sunidtypes, level=sunidlevel)
+                                                        # q.start_request(search_key=sunidname, id=sunid)
 
                                                     if areaid and sunidname:
                                                         sunarea = sunarea if sunarea else ''
@@ -967,10 +967,10 @@ class QccXls:
                                                             sundata[1] = sundata[7]
                                                             sundata[2] = '父公司：' + sonname
                                                             s.mains(pageurl=sunidpageurl, ids=sunid, name=sunidname)
-                                                            # for i in range(len(sundata)):
-                                                            #     sh1.write(xlnum, i, sundata[i])
-                                                            # xlnum += 1
-                                                            # book.save('./汽车类上市公司/gx2.xls')
+                                                            for i in range(len(sundata)):
+                                                                sh1.write(xlnum, i, sundata[i])
+                                                            xlnum += 1
+                                                            book.save('./汽车类上市公司/gxtest.xls')
 
                             else:
                                 print('子公司不存在: ', id)

@@ -169,27 +169,30 @@ class outspider():
                 raise ValueError("请验证账号")
 
     def mains(self, pageurl, ids, name):
-        conn = redis_conn()
-        field = 'qcc_outbound'
-        findres = conn.find_data(field=field, value=name)
-        if findres is False:
-            """对外投资outbound"""
-            keyid = re.findall('firm/(.*?)\.html', pageurl)
-            keyid = keyid[0] if keyid else keyid
-            try:
-                outbound = self.getoutbound(
-                    url='https://www.qcc.com/api/datalist/touzilist',
-                    data='keyNo=%s&pageIndex=1' % keyid,
-                    keyid=keyid,
-                    pageindex=1,
-                    new=True,
-                )
-                self.data_save(items=outbound, ids=ids)
-                conn.set_add(field=field, value=name)
-            except:
-                pass
-        else:
-            print('已存在: ', name)
+        try:
+            conn = redis_conn()
+            field = 'qcc_outbound'
+            findres = conn.find_data(field=field, value=name)
+            if findres is False:
+                """对外投资outbound"""
+                keyid = re.findall('firm/(.*?)\.html', pageurl)
+                keyid = keyid[0] if keyid else keyid
+                try:
+                    outbound = self.getoutbound(
+                        url='https://www.qcc.com/api/datalist/touzilist',
+                        data='keyNo=%s&pageIndex=1' % keyid,
+                        keyid=keyid,
+                        pageindex=1,
+                        new=True,
+                    )
+                    self.data_save(items=outbound, ids=ids)
+                    conn.set_add(field=field, value=name)
+                except:
+                    pass
+            else:
+                print('已存在: ', name)
+        except:
+            print('对外投资出错！', pageurl)
 
     def data_save(self, items=None, ids=None):
         for l in items:
