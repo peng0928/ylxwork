@@ -29,11 +29,10 @@ class pymysql_connection():
                 data_insert_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key, value)
                 self.cursor.execute(data_insert_sql)
                 insert_id = self.conn.insert_id()
-                data_insert_sql2 = 'UPDATE %s set pid="%s", end="0", code="%s" where id=%s' % (
-                    qccdata_table1, insert_id, insert_id, insert_id)
+                data_insert_sql2 = 'UPDATE %s set pid="%s", end="0" where id=%s' % (
+                    qccdata_table1, insert_id, insert_id)
                 self.cursor.execute(data_insert_sql2)
                 pid = self.conn.insert_id()
-
                 self.conn.commit()
                 print('工商数据存储成功:', insert_id)
             else:
@@ -54,18 +53,14 @@ class pymysql_connection():
                         shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                         self.cursor.execute(shareholder_sql)
                         shareholder_id = self.conn.insert_id()
-                        shareholder_sql2 = 'update %s set code="%s" where id=%s' % (
-                            qccdata_table1, str(insert_id) + '.' + str(shareholder_id), shareholder_id)
-                        self.cursor.execute(shareholder_sql2)
                         self.conn.commit()
 
                         for k, v in l.items():
                             str_k += f"{k}" + ','
                             str_v += f'"{v}"' + ','
                         str_k += 'id'
-                        str_v += f'{shareholder_id}'
+                        str_v += f'{insert_id}'
                         shareholder_sql3 = 'insert into %s (%s) values (%s)' % (qccdata_table3, str_k, str_v)
-
                         self.cursor.execute(shareholder_sql3)
                         self.conn.commit()
                         self.cursor.execute('insert into buy_business_qccdata_rel (cid, pid) values (%s, %s)' % (shareholder_id, pid))
@@ -83,31 +78,30 @@ class pymysql_connection():
                         value1 = f'"{StockName}"' + f',"{insert_id}","{1}","{0}", "{type}"'
                         shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                         self.cursor.execute(shareholder_sql)
-                        investment_id = self.conn.insert_id()
-                        investment_sql2 = 'update %s set code="%s" where id=%s' % (
-                            qccdata_table1, str(insert_id) + '.' + str(investment_id), investment_id)
-                        self.cursor.execute(investment_sql2)
+                        shareholderid = self.conn.insert_id()
                         self.conn.commit()
 
                         for k, v in l.items():
                             str_k += f"{k}" + ','
                             str_v += f'"{v}"' + ','
                         str_k += 'id'
-                        str_v += f'{investment_id}'
+                        str_v += f'{insert_id}'
                         investment_sql3 = 'insert into %s (%s) values (%s)' % (qccdata_table2, str_k, str_v)
                         self.cursor.execute(investment_sql3)
                         self.conn.commit()
-                    print('完成插入')
 
+                        """插入关系"""
+                        self.cursor.execute('insert into buy_business_qccdata_rel (cid, pid) values ("%s", "%s")' % (
+                        shareholderid, insert_id))
+                        self.conn.commit()
+                    print('完成插入')
                 self.conn_redis.set_add(value=uuid)
                 print('reids 存储成功:')
-
 
         except Exception as e:
             print(e)
 
-    def qcc_insert2(self, litem, ids=None, code=None, investment=None, type=None, level=None, nuuid=None):
-        type = type
+    def qcc_insert2(self, litem, ids=None, investment=None, types=None, level=None, nuuid=None):
         end = '0' if investment else '1'
         global investment_id
         try:
@@ -117,7 +111,9 @@ class pymysql_connection():
                 litem = litem + f', end={end}'
                 data_insert_sql2 = 'UPDATE %s set %s where id=%s' % (qccdata_table1, litem, ids)
                 self.cursor.execute(data_insert_sql2)
-                # self.conn.commit()
+                self.conn.commit()
+                self.conn_redis.set_add(field='qcc_data', value=nuuid)
+                print('reids 存储成功:')
             else:
                 print('工商数据存储失败:', )
                 "对外投资"
@@ -130,14 +126,14 @@ class pymysql_connection():
                     StockName = l.get('StockName')
                     """子公司"""
                     key1 = 'name, pid, end, level, type'
-                    value1 = f'"{StockName}"' + f',"{ids}","{1}","{int(level)-1}", "{type}"'
+                    value1 = f'"{StockName}"' + f',"{ids}","{1}","{int(level)-1}", "{types}"'
                     shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                     self.cursor.execute(shareholder_sql)
                     investment_id = self.conn.insert_id()
                     # investment_sql2 = 'update %s set code="%s" where id="%s"' % (
                     #     qccdata_table1, str(code) + '.' + str(investment_id), investment_id)
                     # self.cursor.execute(investment_sql2)
-                    # self.conn.commit()
+                    self.conn.commit()
 
                     for k, v in l.items():
                         str_k += f"{k}" + ','
@@ -150,9 +146,6 @@ class pymysql_connection():
 
                     self.cursor.execute('insert into buy_business_qccdata_rel (cid, pid) values ("%s", "%s")' % (investment_id, ids))
                     self.conn.commit()
-
-                self.conn_redis.set_add(value=nuuid)
-                print('reids 存储成功:')
 
         except Exception as e:
             print(e)

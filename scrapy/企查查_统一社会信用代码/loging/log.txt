@@ -21,3 +21,8 @@
 2022-11-07 16:14:05,544 - __main__ - INFO - 信用代码未匹配成功:名称 深圳市儿童医院; id: 686; social_credit_code: 144030000275
 2022-11-07 16:14:18,042 - __main__ - INFO - 信用代码未匹配成功:名称 深圳市福田区妇幼保健院; id: 247; social_credit_code: 144030400059
 2022-11-07 16:14:18,043 - __main__ - INFO - Not Found:名称 深圳市福田区妇幼保健院; id: 247; url: https://www.qcc.com/web/search?key=深圳市福田区妇幼保健院
+2023-01-06 14:35:30,428 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=晋江报业房地产开发有限公司, msg: <title>会员登录 - 企查查</title>
+2023-01-06 14:35:36,454 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=某单位, msg: <title>会员登录 - 企查查</title>
+2023-01-06 14:35:39,080 - __main__ - INFO - Status: False, Status_code: 200, url: https://www.qcc.com/web/search?key=晋中市太谷区住房和城乡建设管理局, msg: <title>会员登录 - 企查查</title>
+2023-01-06 14:35:40,385 - __main__ - INFO - Not Found:名称 河北省秦皇岛市人民检察院本级; id: 5; url: https://www.qcc.com/web/search?key=河北省秦皇岛市人民检察院本级
+2023-01-06 14:35:50,053 - __main__ - INFO - Not Found:名称 济南市技师学院; id: 7; url: https://www.qcc.com/web/search?key=济南市技师学院

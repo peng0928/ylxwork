@@ -27,7 +27,6 @@ class pymysql_connection():
         return fetchall
 
     '''更新数据'''
-
     def update(self, purchasing_type, social_credit_code, parse_result, purchasing_name):
         sql = '''UPDATE bidding_day_data SET purchasing_type="%s", social_credit_code="%s", parse_result="%s" where purchasing_name="%s"''' % (
         purchasing_type, social_credit_code, parse_result, purchasing_name)

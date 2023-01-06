@@ -17,7 +17,7 @@ from useragent import *
 from qccspider.pymysql_connection import *
 from redis_conn import *
 from data_process import *
-from qcc_outspider import outspider
+
 
 class QccSpider():
 
@@ -73,7 +73,7 @@ class QccSpider():
         self.level = level
 
     @retry(exceptions=True, max_retries=10)
-    def start_request(self, search_key, id=None, code=None, cspider=False):
+    def start_request(self, search_key, id=None,code=None,):
         self.notfound = {}
         self.nottag = []
         '''数据查询去重-去除重复采购单位'''
@@ -89,7 +89,7 @@ class QccSpider():
         search_redis = self.redis_conn.find_data(field='qcc_data', value=search_key)
         # search_redis = False
         if search_redis:
-            print('已存在：', search_key)
+            print('已存在, 本次跳过')
         else:
             search_url = f'https://www.qcc.com/web/search?key={search_key}'
             response = requests.get(search_url, headers=headers, proxies={'https': 'tps163.kdlapi.com:15818'})
@@ -128,12 +128,8 @@ class QccSpider():
                             解析字段
                             '''
                             time.sleep(1)
-                            if cspider:
-                                self.cspider(curl, tags, search_key)
-                                condition = False
-                            else:
-                                self.cparse(curl, tags, search_key, id=id, code=code)
-                                condition = False
+                            self.cparse(curl, tags, search_key, id=id, code=code)
+                            condition = False
                             print('===========')
                     else:
                         break
@@ -144,13 +140,13 @@ class QccSpider():
                     sinput = 'q'
                     if sinput != 'q':
                         sname = self.notfound.get(int(sinput))
-                        for k, v in sname.items():
+                        for k,v in sname.items():
                             self.cparse(v, self.nottag[int(sinput)], search_key)
                     else:
                         self.logger.info(f'Not Found:名称 {search_key}')
 
     @retry(exceptions=True, max_retries=10)
-    def cparse(self, url, tags, search_key, id=None, code=None):
+    def cparse(self, url, tags, search_key, id=None,code=None):
         headers = {}
         headers.update({"User-Agent": get_ua()})
         headers.update({"cookie": self.open_cookie()})
@@ -215,11 +211,12 @@ class QccSpider():
             sql_value = ','.join(sql_value_list)
             ilist = []
             for i in range(len(sql_key_list)):
-                ilist.append(sql_key_list[i] + '=' + sql_value_list[i])
+                ilist.append(sql_key_list[i] +'='+ sql_value_list[i])
             ilist = ','.join(ilist)
             """工商数据"""
             print('获取到工商数据:', keyid)
-            print(ilist, id, code)
+            print(ilist,id,code)
+
 
             """股东信息"""
             # shareholder_x = resp.xpath(
@@ -289,6 +286,7 @@ class QccSpider():
             #     shareholder = None
             #     print('股东信息不存在...', shareholder_x)
 
+
             """对外投资outbound"""
             outbound_x = resp.xpath("//section[@id='touzilist']//h3[@class='title']//text()")
             outbound_x = ''.join(outbound_x)
@@ -309,11 +307,11 @@ class QccSpider():
             # if shareholder is None and outbound is None:
             if outbound is None:
                 # input(f'对外投资， 股东信息都为空，请确定!{url}')
-                print(f'对外投资， 股东信息都为空，请确定!', url)
-                outbound = ''
+                print(f'对外投资， 股东信息都为空，请确定!',url)
+                outbound = None
 
-            qcc_conn.qcc_insert2(litem=ilist, ids=id,
-                                 investment=outbound, types=self.type, level=self.level, nuuid=search_key)
+            qcc_conn.qcc_insert2(litem=ilist,ids=id,
+                                investment=outbound, types=self.type, level=self.level, nuuid=search_key)
             qcc_conn.close()
 
     @retry(exceptions=True, max_retries=10)
@@ -380,77 +378,81 @@ class QccSpider():
             sql_key = ','.join(sql_key_list)
             sql_value_list = ['"' + str(i) + '"' for i in sql_value_list]
             sql_value = ','.join(sql_value_list)
-
+            ilist = []
+            for i in range(len(sql_key_list)):
+                ilist.append(sql_key_list[i] +'='+ sql_value_list[i])
+            ilist = ','.join(ilist)
             """工商数据"""
             print('获取到工商数据:', keyid)
 
             """股东信息"""
-            shareholder_x = resp.xpath(
-                "//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
-            shareholder_x = ''.join(shareholder_x)
-            shareholder_x = re.sub('\d', '', shareholder_x)
-            if shareholder_x == '股东信息':
-                shareholder_new = resp.xpath(
-                    "//section[@id='partner']//span[@class='tab-item'][1]//span[@class='item-title']/text()")
-                if shareholder_new:
-                    if shareholder_new[0] == '最新公示':
-                        shareholder = self.getshareholder(
-                            url='https://www.qcc.com/api/datalist/partner',
-                            data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi&type=IpoPartners' % keyid,
-                            keyid=keyid,
-                            new=True,
-                        )
-                    else:
-                        shareholder = self.getshareholder(
-                            url='https://www.qcc.com/api/datalist/partner',
-                            data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
-                            keyid=keyid,
-                            new=False,
-                        )
-                else:
-                    normal = resp.xpath("//th[@class='has-sort-th']//text()")
-                    normal = ''.join(normal)
-                    if '持股比例' in normal:
-                        shareholder = self.getshareholder(
-                            url='https://www.qcc.com/api/datalist/partner',
-                            data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
-                            keyid=keyid,
-                            new=False,
-                        )
-                    else:
-                        normal_list = []
-                        normal_table_list = []
-                        msg_dict = {
-                            '股东(发起人)': 'StockName',
-                            '持股比例': 'StockPercent',
-                            '持股数(股)': 'ShouldCapi',
-                            '公示日期': 'Publicitydate',
-                        }
-                        normal_xpath = "//section[@id='hkpartner']//table[@class='ntable']/tr[position()>1]"
-                        normal_table = resp.xpath(
-                            "//section[@id='hkpartner']//table[@class='ntable']/tr[position()=1]/th")
-                        for normal_item in normal_table:
-                            normal_table_list.append(''.join(normal_item.xpath('./text()')).strip())
-                        print(normal_table_list)
-                        normal_x = resp.xpath(normal_xpath)
-                        for item2 in normal_x:  # 循环一次为表格一行
-                            normal_dict = {}
-                            normal_x2 = item2.xpath("./td")  # 获取表单td长度
-                            for len_n in range(len(normal_x2)):  # 循环每个td
-                                normal_key = msg_dict.get(normal_table_list[len_n])
-                                if normal_key:
-                                    normal_text = normal_x2[len_n].xpath(".//text()")  # 数据
-                                    normal_dict[normal_key] = ''.join(normal_text).strip()
-                                else:
-                                    if normal_table_list[len_n] == '序号':
-                                        pass
-                                    else:
-                                        input(f'字段不存在请检查："{normal_table_list[len_n]}"')
-                            normal_list.append(normal_dict)
-                        shareholder = normal_list
-            else:
-                shareholder = None
-                print('股东信息不存在...', shareholder_x)
+            # shareholder_x = resp.xpath(
+            #     "//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
+            # shareholder_x = ''.join(shareholder_x)
+            # shareholder_x = re.sub('\d', '', shareholder_x)
+            # if shareholder_x == '股东信息':
+            #     shareholder_new = resp.xpath(
+            #         "//section[@id='partner']//span[@class='tab-item'][1]//span[@class='item-title']/text()")
+            #     if shareholder_new:
+            #         if shareholder_new[0] == '最新公示':
+            #             shareholder = self.getshareholder(
+            #                 url='https://www.qcc.com/api/datalist/partner',
+            #                 data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi&type=IpoPartners' % keyid,
+            #                 keyid=keyid,
+            #                 new=True,
+            #             )
+            #         else:
+            #             shareholder = self.getshareholder(
+            #                 url='https://www.qcc.com/api/datalist/partner',
+            #                 data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
+            #                 keyid=keyid,
+            #                 new=False,
+            #             )
+            #     else:
+            #         normal = resp.xpath("//th[@class='has-sort-th']//text()")
+            #         normal = ''.join(normal)
+            #         if '持股比例' in normal:
+            #             shareholder = self.getshareholder(
+            #                 url='https://www.qcc.com/api/datalist/partner',
+            #                 data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
+            #                 keyid=keyid,
+            #                 new=False,
+            #             )
+            #         else:
+            #             normal_list = []
+            #             normal_table_list = []
+            #             msg_dict = {
+            #                 '股东(发起人)': 'StockName',
+            #                 '持股比例': 'StockPercent',
+            #                 '持股数(股)': 'ShouldCapi',
+            #                 '公示日期': 'Publicitydate',
+            #             }
+            #             normal_xpath = "//section[@id='hkpartner']//table[@class='ntable']/tr[position()>1]"
+            #             normal_table = resp.xpath(
+            #                 "//section[@id='hkpartner']//table[@class='ntable']/tr[position()=1]/th")
+            #             for normal_item in normal_table:
+            #                 normal_table_list.append(''.join(normal_item.xpath('./text()')).strip())
+            #             print(normal_table_list)
+            #             normal_x = resp.xpath(normal_xpath)
+            #             for item2 in normal_x:  # 循环一次为表格一行
+            #                 normal_dict = {}
+            #                 normal_x2 = item2.xpath("./td")  # 获取表单td长度
+            #                 for len_n in range(len(normal_x2)):  # 循环每个td
+            #                     normal_key = msg_dict.get(normal_table_list[len_n])
+            #                     if normal_key:
+            #                         normal_text = normal_x2[len_n].xpath(".//text()")  # 数据
+            #                         normal_dict[normal_key] = ''.join(normal_text).strip()
+            #                     else:
+            #                         if normal_table_list[len_n] == '序号':
+            #                             pass
+            #                         else:
+            #                             input(f'字段不存在请检查："{normal_table_list[len_n]}"')
+            #                 normal_list.append(normal_dict)
+            #             shareholder = normal_list
+            # else:
+            #     shareholder = None
+            #     print('股东信息不存在...', shareholder_x)
+
 
             """对外投资outbound"""
             outbound_x = resp.xpath("//section[@id='touzilist']//h3[@class='title']//text()")
@@ -468,10 +470,16 @@ class QccSpider():
                 outbound = None
                 print('对外投资不存在...')
 
-            if shareholder is None and outbound is None:
-                print(f'对外投资， 股东信息都为空，请确定!{url}')
-            qcc_conn.qcc_insert(key=sql_key, value=sql_value, shareholder=shareholder,
-                                investment=outbound, type=self.type, uuid=search_key)
+            qcc_uuid = search_key
+            # if shareholder is None and outbound is None:
+            if outbound is None:
+                # input(f'对外投资， 股东信息都为空，请确定!{url}')
+                print(f'对外投资， 股东信息都为空，请确定!',url)
+                outbound = None
+
+
+            qcc_conn.qcc_insert2(litem=ilist,ids=id,
+                                investment=outbound, type=self.type, level=self.level, nuuid=search_key)
             qcc_conn.close()
 
     def log(self):
@@ -586,7 +594,6 @@ class QccSpider():
             datas = response.json().get('data')
             if datas:
                 page = math.ceil(response.json().get('pageInfo').get('total') / 10)
-                page = int(page)
                 print(f'正在获取对外投资信息:{code}, 页数:', page)
                 for qdata in datas:
                     item_dict = {}
@@ -739,7 +746,14 @@ class QccXls:
     """汽车类上市公司3"""
 
     def get_xls_data4(self):
-
+        self.host = '10.0.3.109'
+        self.port = 3356
+        self.user = 'root'
+        self.password = 'Windows!@#'
+        self.db = 'ubk_plugin'
+        self.conn = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password,
+                                    database=self.db)
+        self.cursor = self.conn.cursor()
         # 打开excel
         import csv
         with open('./汽车类上市公司/name.csv', mode="w", encoding="utf-8-sig", newline="") as f:
@@ -877,111 +891,30 @@ class QccXls:
                         #     pass
 
     """在数据库中根据条件导出子孙公司，数据不全自动补全"""
-
     def get_data4(self):
-        s = outspider()
         import csv
-        import xlwt
-        book = xlwt.Workbook()
-        xlnum = 0
-        # 添sheet工作表
-        sh1 = book.add_sheet('sheet1')
         with open('./汽车类上市公司/name.csv', mode="r", encoding="utf-8-sig", newline="") as f:
             writer = csv.reader(f)
             for queryset in writer:
-                sql = 'select * from buy_business_qccdata where name ="%s" and pageurl is not null' % queryset[0]. \
+                sql = 'select * from buy_business_qccdata where name ="%s" and pageurl is not null' % queryset[0].\
                     replace('(', '（').replace(')', '）')
                 self.cursor.execute(sql)
                 res = self.cursor.fetchone()
+                print('当前: ', res)
                 if res:
-                    res = list(res)
-                    res2 = copy.deepcopy(res)
-                    res2[0] = '当前公司'
-                    res2[1] = res2[7]
-                    print('当前: ', res[7], res[4], res[0])
-                    # for i in range(len(res2)):
-                    #     sh1.write(xlnum, i, res2[i])
-                    # xlnum += 1
-                    # book.save('./汽车类上市公司/gx2.xls')
-                    s.mains(pageurl=str(res[4]), ids=res[0], name=res[7])
                     reslist = (list(res))
                     id = reslist[0]
                     sons = self.get_son(pid=id)
-                    if sons:
-                        areaid = '广西'
-                        for items in sons:
-                            sql = 'select * from buy_business_qccdata where id=%s' % items
-                            self.cursor.execute(sql)
-                            sonres = self.cursor.fetchone()
-                            if res:
-                                sonres = list(sonres)
-                                sonpageurl = sonres[4]
-                                sonid = sonres[0]
-                                sonarea = sonres[23]
-                                sontypes = sonres[-2]
-                                sonlevel = sonres[2]
-                                sonname = sonres[7]
-                                print('当前子公司:', sonname)
-                                if not sonpageurl:
-                                    pass
-                                    # print('子公司数据不完全: ', res)
-                                    # q = QccSpider(type=type, level=level)
-                                    # q.start_request(search_key=sonname, id=sonid)
-                                else:
-                                    if areaid and sonarea:
-                                        if areaid in sonarea or areaid in sonname:
-                                            print('子公司:', sonname)
-                                            sonres[0] = '子公司'
-                                            sonres[1] = sonres[7]
-                                            s.mains(pageurl=sonpageurl, ids=sonid, name=sonname)
-                                            # for i in range(len(sonres)):
-                                            #     sh1.write(xlnum, i, sonres[i])
-                                            # xlnum += 1
-                                            # book.save('./汽车类上市公司/gx2.xls')
-                                            if not sonpageurl:
-                                                print('子公司数据不完全: ', res)
-                                                q = QccSpider(type=sontypes, level=sonlevel)
-                                                q.start_request(search_key=sonname, id=sonid)
-                                        else:
-                                            sunquery = self.get_sun(pid=sonid)
-                                            if sunquery:
-                                                for suni in sunquery:
-                                                    sundata = self.qccdata(suni)
-                                                    sundata = list(sundata)
-                                                    sunidpageurl = sundata[4]
-                                                    sunid = sundata[0]
-                                                    sunarea = sundata[23]
-                                                    sunidtypes = sundata[-2]
-                                                    sunidlevel = sundata[2]
-                                                    sunidname = sundata[7]
-                                                    if not sunidpageurl:
-                                                        print('孙公司数据不完全: ', sundata)
-                                                        q = QccSpider(type=sunidtypes, level=sunidlevel)
-                                                        q.start_request(search_key=sunidname, id=sunid)
-
-                                                    if areaid and sunidname:
-                                                        sunarea = sunarea if sunarea else ''
-                                                        if areaid in sunidname or areaid in sunarea:
-                                                            print('孙公司:', sunidname)
-                                                            sundata[0] = '孙公司'
-                                                            sundata[1] = sundata[7]
-                                                            sundata[2] = '父公司：' + sonname
-                                                            s.mains(pageurl=sunidpageurl, ids=sunid, name=sunidname)
-                                                            # for i in range(len(sundata)):
-                                                            #     sh1.write(xlnum, i, sundata[i])
-                                                            # xlnum += 1
-                                                            # book.save('./汽车类上市公司/gx2.xls')
-
-                            else:
-                                print('子公司不存在: ', id)
+                    for items in sons:
+                        son = self.get_qccdata(id=items, areaid='广西')
+                        if son:
+                            print('子公司:', son)
                 else:
                     print('未成功:', queryset[0])
-                    # self.get_data_completion(name=queryset[0], cspider=True)
 
     '''获取子公司'''
-
     def get_son(self, pid):
-        sql = 'select cid from buy_business_qccdata_rel where pid=%s' % pid
+        sql = 'select cid from buy_business_qccdata_rel where pid=%s' %pid
         self.cursor.execute(sql)
         res = self.cursor.fetchall()
         res = [i[0] for i in res]
@@ -991,9 +924,8 @@ class QccXls:
             return
 
     '''获取孙公司'''
-
     def get_sun(self, pid):
-        sql = 'select cid from buy_business_qccdata_rel where pid=%s' % pid
+        sql = 'select cid from buy_business_qccdata_rel where pid=%s' %pid
         self.cursor.execute(sql)
         res = self.cursor.fetchall()
         res = [i[0] for i in res]
@@ -1002,17 +934,35 @@ class QccXls:
         else:
             return
 
-    def qccdata(self, id):
+    def get_qccdata(self, id, areaid=None):
         sql = 'select * from buy_business_qccdata where id=%s' % id
         self.cursor.execute(sql)
         res = self.cursor.fetchone()
-        return res
+        if res:
+            res = list(res)
+            pageurl = res[4]
+            id = res[0]
+            area = res[23]
+            types = res[-2]
+            level = res[2]
+            name = res[7]
+            if not pageurl:
+                print('数据不完全: ', res)
+                q = QccSpider(type=types, level=level)
+                q.start_request(search_key=name, id=id)
+
+            if areaid and area:
+                if areaid in area:
+                    suns = self.get_sun(pid=id)
+                    return res
+        else:
+            print('子公司不存在: ', id)
 
     """数据补全"""
-
-    def get_data_completion(self, name=None, cspider=False):
+    def get_data_completion(self, name=None, id=None):
         q = QccSpider(type=type, level=level)
-        q.start_request(search_key=name, cspider=cspider)
+        q.start_request(search_key=name, id=id)
+
 
     def up2(self, type, level):
         self.host = '10.0.3.109'
@@ -1031,10 +981,9 @@ class QccXls:
         r1 = self.cursor.fetchall()
         for i in r1:
             print(i)
-            name = i[8].replace('（', '(').replace('）', ')')
+            name = i[7].replace('（', '(').replace('）', ')')
             id = i[0]
-            code = i[1]
-            q.start_request(search_key=name, id=id, code=code)
+            q.start_request(search_key=name, id=id)
 
     def up3(self, type, level):
         q = QccSpider(type=type, level=level)
@@ -1049,16 +998,15 @@ class QccXls:
             code = i[1]
             q.start_request(search_key=name, id=id, code=code)
 
-
 if __name__ == '__main__':
     print('''************请注意更新插入等级关系: item['level'] , type************''')
     type = '2'
     level = '0'
 
-    # x = QccXls().up3(type=type, level=level)
-    x = QccXls().get_data4()
+    x = QccXls().up2(type=type, level=level)
+    # x = QccXls().get_data4()
     # x = QccXls().get_xls_data4()
     # q = QccSpider(type=type)
     # for name in x:
     #     print(name)
-    # q.start_request
+        # q.start_request
