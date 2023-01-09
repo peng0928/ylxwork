@@ -304,6 +304,8 @@ class QccSpider():
 
                 if page > 1:
                     for i in range(2, page + 1):
+                        time.sleep(2)
+
                         print(f'正在抓取第{i}页.')
                         outbound = self.getoutbound2(
                             url='https://www.qcc.com/api/datalist/touzilist',
