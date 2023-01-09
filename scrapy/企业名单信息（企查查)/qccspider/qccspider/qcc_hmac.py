@@ -103,6 +103,29 @@ def information(keyno: str = None, pageindex: str = None, tid: str = None, new=F
     qcc_dict[k1] = k2
     return qcc_dict
 
+def information2(keyno: str = None, pageindex: str = None, tid: str = None, new=False):
+    """
+    outbound('6fd1ea84db38609f091e64530e904ce9', '7', 'c7471078d8d101a605235f57d5887e4d')
+    :param keyno: 企业id
+    :param pageindex: 对外投资页码
+    :param tid: window.tid
+    :return:
+    """
+    qcc_dict = {}
+    new = '&type=ipopartner' if new else ''
+    with open('qcchmac.js', 'r')as f:
+        qcc_encode = f.read()
+    ctx = execjs.compile(qcc_encode)
+    e = "/api/datalist/partner?issortasc=&keyno=%s&pageindex=1&pagesize=50&sortfield=" % keyno
+    result = ctx.call('r', e)
+    text1 = "/api/datalist/partner?issortasc=&keyno=%s&pageindex=1&pagesize=50&sortfield={}" % keyno
+    text2 = '/api/datalist/partner?issortasc=&keyno=%s&pageindex=1&pagesize=50&sortfield=pathString{}%s' % (keyno, tid)
+
+    k1 = hmac_demo(result, text1)[8:28]
+    k2 = hmac_demo(result, text2)
+    qcc_dict[k1] = k2
+    return qcc_dict
+
 
 def gethmac(qtypy=0, keyno=None, pageindex=None, tid=None, new=None):
     """
@@ -116,6 +139,8 @@ def gethmac(qtypy=0, keyno=None, pageindex=None, tid=None, new=None):
     """
     if qtypy == 0:
         return information(keyno, pageindex, tid, new)
+    if qtypy == 2:
+        return information2(keyno, pageindex, tid, new)
     if qtypy == 1:
         return outbound(keyno, pageindex, tid, webkey='touzilist')
 
@@ -127,5 +152,4 @@ if __name__ == "__main__":
     # k2 = getownershipstructuremix(keyno, tid)
     # print(k1)
     # print(k2)
-    print(gethmac(1, keyno='b4858d5cc72e05c7a1622b2eda293986', pageindex=1, tid='c7471078d8d101a605235f57d5887e4d', new=True))
-    # pass
+    print(information2(keyno='fb6136509fb0ce219e9dd2ba1f395c68', tid='c7471078d8d101a605235f57d5887e4d'))

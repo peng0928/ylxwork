@@ -18,6 +18,7 @@ from qccspider.pymysql_connection import *
 from redis_conn import *
 from data_process import *
 from qcc_outspider import outspider
+from qccspider.config import *
 
 class QccSpider():
 
@@ -385,8 +386,7 @@ class QccSpider():
             print('获取到工商数据:', keyid)
 
             """股东信息"""
-            shareholder_x = resp.xpath(
-                "//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
+            shareholder_x = resp.xpath(shareholder_xpath)
             shareholder_x = ''.join(shareholder_x)
             shareholder_x = re.sub('\d', '', shareholder_x)
             if shareholder_x == '股东信息':
@@ -453,7 +453,7 @@ class QccSpider():
                 print('股东信息不存在...', shareholder_x)
 
             """对外投资outbound"""
-            outbound_x = resp.xpath("//section[@id='touzilist']//h3[@class='title']//text()")
+            outbound_x = resp.xpath(outbound_xpath)
             outbound_x = ''.join(outbound_x)
             outbound_x = re.sub('\d', '', outbound_x)
             if outbound_x == '对外投资':
@@ -884,11 +884,14 @@ class QccXls:
         import xlwt
         book = xlwt.Workbook()
         xlnum = 0
+        sh2num = 0
         # 添sheet工作表
         sh1 = book.add_sheet('sheet1')
+        sh2 = book.add_sheet('sheet2')
         with open('./汽车类上市公司/name.csv', mode="r", encoding="utf-8-sig", newline="") as f:
             writer = csv.reader(f)
             for queryset in writer:
+                fbool = 0
                 sql = 'select * from buy_business_qccdata where name ="%s" and pageurl is not null' % queryset[0]. \
                     replace('(', '（').replace(')', '）')
                 self.cursor.execute(sql)
@@ -899,10 +902,11 @@ class QccXls:
                     res2[0] = '当前公司'
                     res2[1] = res2[7]
                     print('当前: ', res[7], res[4], res[0])
-                    for i in range(len(res2)):
-                        sh1.write(xlnum, i, res2[i])
-                    xlnum += 2
-                    book.save('./汽车类上市公司/gxtest.xls')
+                    # xlnum += 1
+                    # for i in range(len(res2)):
+                    #     sh1.write(xlnum, i, res2[i])
+                    # xlnum += 1
+                    # book.save('./汽车类上市公司/gxtest.xls')
                     s.mains(pageurl=str(res[4]), ids=res[0], name=res[7])
                     reslist = (list(res))
                     id = reslist[0]
@@ -924,16 +928,37 @@ class QccXls:
                                 print('当前子公司:', sonname)
                                 if not sonpageurl:
                                     pass
-                                    # print('子公司数据不完全: ', res)
-                                    # q = QccSpider(type=type, level=level)
-                                    # q.start_request(search_key=sonname, id=sonid)
+                                    print('子公司数据不完全: ', res)
+                                    q = QccSpider(type=type, level=level)
+                                    q.start_request(search_key=sonname, id=sonid)
                                 else:
                                     if areaid and sonarea:
                                         if areaid in sonarea or areaid in sonname:
+                                            fbool += 1
+                                            if fbool < 2:
+                                                xlnum += 1
+                                                for i in range(len(res2)):
+                                                    sh1.write(xlnum, i, res2[i])
+                                                xlnum += 1
+                                                book.save('./汽车类上市公司/gxtest.xls')
+
                                             print('子公司:', sonname)
+                                            # s.mains(pageurl=sonpageurl, ids=sonid, name=sonname)
+
+                                            investment = self.get_investment_new(ids=id, stockname=sonname)
+                                            if investment:
+                                                investment = list(investment)
+                                                investment.append(res2[7])
+                                                investment.append('子公司')
+                                                print('对外投资:', investment)
+                                                # for i in range(len(investment)):
+                                                #     sh2.write(sh2num, i, investment[i])
+                                                # sh2num += 1
+                                                # book.save('./汽车类上市公司/gxtest.xls')
+
                                             sonres[0] = '子公司'
                                             sonres[1] = sonres[7]
-                                            s.mains(pageurl=sonpageurl, ids=sonid, name=sonname)
+
                                             for i in range(len(sonres)):
                                                 sh1.write(xlnum, i, sonres[i])
                                             xlnum += 1
@@ -956,21 +981,42 @@ class QccXls:
                                                     sunidname = sundata[7]
                                                     if not sunidpageurl:
                                                         print('孙公司数据不完全: ', sundata)
-                                                        # q = QccSpider(type=sunidtypes, level=sunidlevel)
-                                                        # q.start_request(search_key=sunidname, id=sunid)
+                                                        q = QccSpider(type=sunidtypes, level=sunidlevel)
+                                                        q.start_request(search_key=sunidname, id=sunid)
 
                                                     if areaid and sunidname:
                                                         sunarea = sunarea if sunarea else ''
                                                         if areaid in sunidname or areaid in sunarea:
+                                                            fbool += 1
+                                                            # if fbool < 2:
+                                                            #     xlnum += 1
+                                                            #     for i in range(len(res2)):
+                                                            #         sh1.write(xlnum, i, res2[i])
+                                                            #     xlnum += 1
+                                                            #     book.save('./汽车类上市公司/gxtest.xls')
+
                                                             print('孙公司:', sunidname)
+
+                                                            # suninvestment = self.get_investment_new(ids=sonid, stockname=sunidname)
+                                                            # if suninvestment:
+                                                            #     print('对外投资:', suninvestment)
+                                                            #     suninvestment = list(suninvestment)
+                                                            #     suninvestment.append(sonname)
+                                                            #     suninvestment.append('孙公司')
+                                                            #     for i in range(len(suninvestment)):
+                                                            #         sh2.write(sh2num, i, suninvestment[i])
+                                                            #     sh2num += 1
+                                                            #     book.save('./汽车类上市公司/gxtest.xls')
+
                                                             sundata[0] = '孙公司'
                                                             sundata[1] = sundata[7]
                                                             sundata[2] = '父公司：' + sonname
+                                                            s.mains(pageurl=sonpageurl, ids=sonid, name=sonname)
                                                             s.mains(pageurl=sunidpageurl, ids=sunid, name=sunidname)
-                                                            for i in range(len(sundata)):
-                                                                sh1.write(xlnum, i, sundata[i])
-                                                            xlnum += 1
-                                                            book.save('./汽车类上市公司/gxtest.xls')
+                                                            # for i in range(len(sundata)):
+                                                            #     sh1.write(xlnum, i, sundata[i])
+                                                            # xlnum += 1
+                                                            # book.save('./汽车类上市公司/gxtest.xls')
 
                             else:
                                 print('子公司不存在: ', id)
@@ -1002,17 +1048,35 @@ class QccXls:
         else:
             return
 
-    def qccdata(self, id):
-        sql = 'select * from buy_business_qccdata where id=%s' % id
+    def qccdata(self, id=None):
+        if id:
+            sql = 'select * from buy_business_qccdata where id=%s' % id
+        else:
+            sql = 'select id, pageurl, name from buy_business_qccdata'
+        self.cursor.execute(sql)
+        res = self.cursor.fetchall()
+        return res
+
+    def get_investment_new(self, ids, stockname):
+        sql = 'select * from buy_business_qcc_investment_new where id=%s and StockName="%s"' % (ids, stockname)
         self.cursor.execute(sql)
         res = self.cursor.fetchone()
         return res
 
-    """数据补全"""
-
-    def get_data_completion(self, name=None, cspider=False):
-        q = QccSpider(type=type, level=level)
-        q.start_request(search_key=name, cspider=cspider)
+    """数据补全(股东信息，对外投资)"""
+    def get_data_completion(self, sonname=None, sonid=None, types=None, level=None):
+        redisConn = redis_conn()
+        getData = self.qccdata()
+        for item in getData:
+            ids = item[0]
+            pageurl = item[1]
+            name = item[2]
+            name = name if name else ''
+            redisName = str(ids) + '_' + name
+            investmentBool = redisConn.find_data(field='qcc_investment_new', value=redisName)
+            shareholderBool = redisConn.find_data(field='qcc_shareholderinformation_new', value=redisName)
+        # q = QccSpider(type=types, level=level)
+        # q.start_request(search_key=sonname, id=sonid)
 
     def up2(self, type, level):
         self.host = '10.0.3.109'
@@ -1056,7 +1120,9 @@ if __name__ == '__main__':
     level = '0'
 
     # x = QccXls().up3(type=type, level=level)
-    x = QccXls().get_data4()
+    # x = QccXls().get_data_completion(sonname='广西上横高速公路有限公司', sonid='53186', types='1', level='-2')
+    x = QccXls().get_data_completion()
+    # x = QccXls().get_data4()
     # x = QccXls().get_xls_data4()
     # q = QccSpider(type=type)
     # for name in x:

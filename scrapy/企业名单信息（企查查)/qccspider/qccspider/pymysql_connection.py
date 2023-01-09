@@ -130,9 +130,6 @@ class pymysql_connection():
                     shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
                     self.cursor.execute(shareholder_sql)
                     investment_id = self.conn.insert_id()
-                    # investment_sql2 = 'update %s set code="%s" where id="%s"' % (
-                    #     qccdata_table1, str(code) + '.' + str(investment_id), investment_id)
-                    # self.cursor.execute(investment_sql2)
                     self.conn.commit()
 
                     for k, v in l.items():
@@ -142,13 +139,46 @@ class pymysql_connection():
                     str_v += f'{investment_id}'
                     investment_sql3 = 'insert into %s (%s) values (%s)' % (qccdata_table2, str_k, str_v)
                     self.cursor.execute(investment_sql3)
-                    # self.conn.commit()
 
                     self.cursor.execute('insert into buy_business_qccdata_rel (cid, pid) values ("%s", "%s")' % (investment_id, ids))
                     self.conn.commit()
 
         except Exception as e:
             print(e)
+
+    def insert_shareholderinformation_new(self, item, insert_id, redsi_name):
+        redisConn = redis_conn()
+        tablename = 'buy_business_qcc_shareholderinformation_new'
+        for l in item:
+            str_k = ''
+            str_v = ''
+            for k, v in l.items():
+                str_k += f"{k}" + ','
+                str_v += f'"{v}"' + ','
+            str_k += 'cid'
+            str_v += f'{insert_id}'
+            investment_sql3 = 'insert into %s (%s) values (%s)' % (tablename, str_k, str_v)
+            self.cursor.execute(investment_sql3)
+            self.conn.commit()
+        redisConn.set_add(field='qcc_shareholderinformation_new', value=redsi_name)
+        print('股东信息Redis插入成功:', redsi_name)
+
+    def insert_qcc_investment_new(self, item, insert_id, redsi_name):
+        redisConn = redis_conn()
+        tablename = 'buy_business_qcc_investment_new'
+        for l in item:
+            str_k = ''
+            str_v = ''
+            for k, v in l.items():
+                str_k += f"{k}" + ','
+                str_v += f'"{v}"' + ','
+            str_k += 'cid'
+            str_v += f'{insert_id}'
+            investment_sql3 = 'insert into %s (%s) values (%s)' % (tablename, str_k, str_v)
+            self.cursor.execute(investment_sql3)
+            self.conn.commit()
+        redisConn.set_add(field='qcc_investment_new', value=redsi_name)
+        print('对外投资Redis插入成功:', redsi_name)
 
     def test(self):
         sql = 'select * from buy_business_qccdata where type = 0'

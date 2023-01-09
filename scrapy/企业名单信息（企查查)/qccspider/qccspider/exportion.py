@@ -2,6 +2,7 @@
 # @Date    : 2023-01-02 16:34
 # @Author  : chenxuepeng
 import csv, pymysql
+from redis_conn import redis_conn
 
 
 class mysql_conn():
@@ -34,9 +35,11 @@ class mysql_conn():
     def export_gx(self):
         self.key01 = [
             # 'pageurl','label','统一社会信用代码','企业名称','法定代表人','登记状态','状态','成立日期','注册资本','实缴资本',
-            'pageurl','label','credit_code','name','legal_representative','registration_status','status','incorporation_date','registered_capital','paid_capital',
+            'pageurl', 'label', 'credit_code', 'name', 'legal_representative', 'registration_status', 'status',
+            'incorporation_date', 'registered_capital', 'paid_capital',
 
-            'organization_code', 'business_code', 'taxpayer_code', 'enterprise_type', 'business_term', 'taxpayer_qualification', 'personnel_size', 'insured_num', 'approval_date', 'area', 'organ',
+            'organization_code', 'business_code', 'taxpayer_code', 'enterprise_type', 'business_term',
+            'taxpayer_qualification', 'personnel_size', 'insured_num', 'approval_date', 'area', 'organ',
 
             'io_code', 'industry', 'english_name', 'address', 'business_scope', 'report_latest',
         ]
@@ -54,13 +57,13 @@ class mysql_conn():
             fdata = self.select_father(nid)
             if fdata:
                 sdata.update({
-                        'upward': {
-                            "direction": "upward",
-                            "name": "origin",
-                            "children": [fdata]
+                    'upward': {
+                        "direction": "upward",
+                        "name": "origin",
+                        "children": [fdata]
 
-                        }
-                     })
+                    }
+                })
 
             """子公司"""
             list2 = []
@@ -88,13 +91,13 @@ class mysql_conn():
 
             if list2:
                 sdata.update({
-                        'downward': {
-                            "direction": "downward",
-                            "name": "origin",
-                            "children": list2
+                    'downward': {
+                        "direction": "downward",
+                        "name": "origin",
+                        "children": list2
 
-                        }
-                    })
+                    }
+                })
 
             print('公司:', sdata)
 
@@ -139,8 +142,46 @@ class mysql_conn():
             self.conn.commit()
             print(cid, pid)
 
+    """插入Redis企业名单信息集合: qcc_qccdata(name)"""
+    def sadd_qcc_qccdata(self):
+        redisConn = redis_conn()
+        tablename = 'buy_business_qccdata'
+        sql = 'select id, name from %s where pageurl is not null' % tablename
+        self.cursor.execute(sql)
+        selectResult = self.cursor.fetchall()
+        for item in selectResult:
+            ids = item[0]
+            name = item[1]
+            if name:
+                redisConn.set_add(field='qcc_qccdata', value=name)
+
+    """插入Redis对外投资集合: qcc_investment(id_name)"""
+    def sadd_qcc_investment(self):
+        redisConn = redis_conn()
+        tablename = 'buy_business_qcc_investment()'
+        sql = 'select id, StockName from %s' % tablename
+        self.cursor.execute(sql)
+        selectResult = self.cursor.fetchall()
+        for item in selectResult:
+            ids = item[0]
+            stockName = item[1]
+            redisValue = str(ids) + '_' + stockName
+            redisConn.set_add(field='qcc_investment', value=redisValue)
+
+    """插入Redis股东信息集合: qcc_shareholderinformation(id_name)"""
+    def sadd_qcc_shareholderinformation(self):
+        redisConn = redis_conn()
+        tablename = 'buy_business_qcc_shareholderinformation'
+        sql = 'select id, StockName from %s' % tablename
+        self.cursor.execute(sql)
+        selectResult = self.cursor.fetchall()
+        for item in selectResult:
+            ids = item[0]
+            stockName = item[1]
+            redisValue = str(ids) + '_' + stockName
+            redisConn.set_add(field='qcc_shareholderinformation', value=redisValue)
+
 
 if __name__ == '__main__':
     p = mysql_conn()
-    # p.rel()
-    p.export_gx()
+    p.sadd_qcc_qccdata()
