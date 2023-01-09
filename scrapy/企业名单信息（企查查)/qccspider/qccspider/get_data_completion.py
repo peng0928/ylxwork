@@ -105,15 +105,17 @@ class QccSpider():
             print('当前:', pageurl)
             if not investmentBool:
                 self.spider_investment(url=pageurl, ids=ids, redsi_name=redisName)
+                time.sleep(5)
             else:
                 print('对外投资已存在')
 
             if not shareholderBool:
                 self.spider_shareholder(url=pageurl, ids=ids, redsi_name=redisName)
+                time.sleep(5)
             else:
                 print('股东信息已存在')
 
-            time.sleep(3)
+
 
     @retry(exceptions=True, max_retries=10)
     def spider_shareholder(self, url, ids, redsi_name):
