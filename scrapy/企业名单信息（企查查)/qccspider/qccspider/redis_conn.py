@@ -10,7 +10,6 @@ class redis_conn():
     ##########断点续爬###########
     def set_add(self, field=None, value=None):
         self.redis_conn.sadd(field, value)
-        print(f'sadd success value= {value}')
 
     def get_data(self, field=None):
         result = self.redis_conn.smembers(field)

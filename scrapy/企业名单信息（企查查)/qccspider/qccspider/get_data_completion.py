@@ -105,13 +105,13 @@ class QccSpider():
             print('当前:', pageurl)
             if not investmentBool:
                 self.spider_investment(url=pageurl, ids=ids, redsi_name=redisName)
-                time.sleep(5)
+                time.sleep(2)
             else:
                 print('对外投资已存在')
 
             if not shareholderBool:
                 self.spider_shareholder(url=pageurl, ids=ids, redsi_name=redisName)
-                time.sleep(5)
+                time.sleep(2)
             else:
                 print('股东信息已存在')
 
@@ -304,7 +304,7 @@ class QccSpider():
 
                 if page > 1:
                     for i in range(2, page + 1):
-                        time.sleep(2)
+                        time.sleep(1)
 
                         print(f'正在抓取第{i}页.')
                         outbound = self.getoutbound2(

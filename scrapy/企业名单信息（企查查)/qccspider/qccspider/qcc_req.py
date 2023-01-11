@@ -20,6 +20,7 @@ from data_process import *
 from qcc_outspider import outspider
 from qccspider.config import *
 
+
 class QccSpider():
 
     def __init__(self, type, level):
@@ -86,8 +87,8 @@ class QccSpider():
         # search_key = 'TCL科技集团(天津)有限公司'
         search_key = search_key.replace(' ', '')
 
-        print('当前: ', search_key)
-        search_redis = self.redis_conn.find_data(field='qcc_data', value=search_key)
+        print('当前: ', search_key, id)
+        search_redis = self.redis_conn.find_data(field='qcc_qccdata', value=search_key)
         # search_redis = False
         if search_redis:
             print('已存在：', search_key)
@@ -130,7 +131,7 @@ class QccSpider():
                             '''
                             time.sleep(1)
                             if cspider:
-                                self.cspider(curl, tags, search_key)
+                                self.cspider(curl, tags, search_key, id)
                                 condition = False
                             else:
                                 self.cparse(curl, tags, search_key, id=id, code=code)
@@ -223,72 +224,72 @@ class QccSpider():
             print(ilist, id, code)
 
             """股东信息"""
-            # shareholder_x = resp.xpath(
-            #     "//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
-            # shareholder_x = ''.join(shareholder_x)
-            # shareholder_x = re.sub('\d', '', shareholder_x)
-            # if shareholder_x == '股东信息':
-            #     shareholder_new = resp.xpath(
-            #         "//section[@id='partner']//span[@class='tab-item'][1]//span[@class='item-title']/text()")
-            #     if shareholder_new:
-            #         if shareholder_new[0] == '最新公示':
-            #             shareholder = self.getshareholder(
-            #                 url='https://www.qcc.com/api/datalist/partner',
-            #                 data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi&type=IpoPartners' % keyid,
-            #                 keyid=keyid,
-            #                 new=True,
-            #             )
-            #         else:
-            #             shareholder = self.getshareholder(
-            #                 url='https://www.qcc.com/api/datalist/partner',
-            #                 data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
-            #                 keyid=keyid,
-            #                 new=False,
-            #             )
-            #     else:
-            #         normal = resp.xpath("//th[@class='has-sort-th']//text()")
-            #         normal = ''.join(normal)
-            #         if '持股比例' in normal:
-            #             shareholder = self.getshareholder(
-            #                 url='https://www.qcc.com/api/datalist/partner',
-            #                 data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
-            #                 keyid=keyid,
-            #                 new=False,
-            #             )
-            #         else:
-            #             normal_list = []
-            #             normal_table_list = []
-            #             msg_dict = {
-            #                 '股东(发起人)': 'StockName',
-            #                 '持股比例': 'StockPercent',
-            #                 '持股数(股)': 'ShouldCapi',
-            #                 '公示日期': 'Publicitydate',
-            #             }
-            #             normal_xpath = "//section[@id='hkpartner']//table[@class='ntable']/tr[position()>1]"
-            #             normal_table = resp.xpath(
-            #                 "//section[@id='hkpartner']//table[@class='ntable']/tr[position()=1]/th")
-            #             for normal_item in normal_table:
-            #                 normal_table_list.append(''.join(normal_item.xpath('./text()')).strip())
-            #             print(normal_table_list)
-            #             normal_x = resp.xpath(normal_xpath)
-            #             for item2 in normal_x:  # 循环一次为表格一行
-            #                 normal_dict = {}
-            #                 normal_x2 = item2.xpath("./td")  # 获取表单td长度
-            #                 for len_n in range(len(normal_x2)):  # 循环每个td
-            #                     normal_key = msg_dict.get(normal_table_list[len_n])
-            #                     if normal_key:
-            #                         normal_text = normal_x2[len_n].xpath(".//text()")  # 数据
-            #                         normal_dict[normal_key] = ''.join(normal_text).strip()
-            #                     else:
-            #                         if normal_table_list[len_n] == '序号':
-            #                             pass
-            #                         else:
-            #                             input(f'字段不存在请检查："{normal_table_list[len_n]}"')
-            #                 normal_list.append(normal_dict)
-            #             shareholder = normal_list
-            # else:
-            #     shareholder = None
-            #     print('股东信息不存在...', shareholder_x)
+            shareholder_x = resp.xpath(
+                "//section[@id='hkpartner']/div[@class='tcaption']/h3[@class='title']//text()|//section[@id='partner']//h3[@class='title']//text()")
+            shareholder_x = ''.join(shareholder_x)
+            shareholder_x = re.sub('\d', '', shareholder_x)
+            if shareholder_x == '股东信息':
+                shareholder_new = resp.xpath(
+                    "//section[@id='partner']//span[@class='tab-item'][1]//span[@class='item-title']/text()")
+                if shareholder_new:
+                    if shareholder_new[0] == '最新公示':
+                        shareholder = self.getshareholder(
+                            url='https://www.qcc.com/api/datalist/partner',
+                            data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi&type=IpoPartners' % keyid,
+                            keyid=keyid,
+                            new=True,
+                        )
+                    else:
+                        shareholder = self.getshareholder(
+                            url='https://www.qcc.com/api/datalist/partner',
+                            data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
+                            keyid=keyid,
+                            new=False,
+                        )
+                else:
+                    normal = resp.xpath("//th[@class='has-sort-th']//text()")
+                    normal = ''.join(normal)
+                    if '持股比例' in normal:
+                        shareholder = self.getshareholder(
+                            url='https://www.qcc.com/api/datalist/partner',
+                            data='isSortAsc=true&keyNo=%s&pageIndex=1&pageSize=50&sortField=shouldcapi' % keyid,
+                            keyid=keyid,
+                            new=False,
+                        )
+                    else:
+                        normal_list = []
+                        normal_table_list = []
+                        msg_dict = {
+                            '股东(发起人)': 'StockName',
+                            '持股比例': 'StockPercent',
+                            '持股数(股)': 'ShouldCapi',
+                            '公示日期': 'Publicitydate',
+                        }
+                        normal_xpath = "//section[@id='hkpartner']//table[@class='ntable']/tr[position()>1]"
+                        normal_table = resp.xpath(
+                            "//section[@id='hkpartner']//table[@class='ntable']/tr[position()=1]/th")
+                        for normal_item in normal_table:
+                            normal_table_list.append(''.join(normal_item.xpath('./text()')).strip())
+                        print(normal_table_list)
+                        normal_x = resp.xpath(normal_xpath)
+                        for item2 in normal_x:  # 循环一次为表格一行
+                            normal_dict = {}
+                            normal_x2 = item2.xpath("./td")  # 获取表单td长度
+                            for len_n in range(len(normal_x2)):  # 循环每个td
+                                normal_key = msg_dict.get(normal_table_list[len_n])
+                                if normal_key:
+                                    normal_text = normal_x2[len_n].xpath(".//text()")  # 数据
+                                    normal_dict[normal_key] = ''.join(normal_text).strip()
+                                else:
+                                    if normal_table_list[len_n] == '序号':
+                                        pass
+                                    else:
+                                        input(f'字段不存在请检查："{normal_table_list[len_n]}"')
+                            normal_list.append(normal_dict)
+                        shareholder = normal_list
+            else:
+                shareholder = None
+                print('股东信息不存在...', shareholder_x)
 
             """对外投资outbound"""
             outbound_x = resp.xpath("//section[@id='touzilist']//h3[@class='title']//text()")
@@ -306,19 +307,17 @@ class QccSpider():
                 outbound = None
                 print('对外投资不存在...')
 
-            qcc_uuid = search_key
-            # if shareholder is None and outbound is None:
-            if outbound is None:
-                # input(f'对外投资， 股东信息都为空，请确定!{url}')
-                print(f'对外投资， 股东信息都为空，请确定!', url)
-                outbound = ''
-
-            qcc_conn.qcc_insert2(litem=ilist, ids=id,
-                                 investment=outbound, types=self.type, level=self.level, nuuid=search_key)
+            if shareholder is None and outbound is None:
+                # if outbound is None:
+                input(f'对外投资， 股东信息都为空，请确定!{url}')
+                # print(f'对外投资， 股东信息都为空，请确定!', url)
+                # outbound = ''
+            qcc_conn.qcc_insert(key=sql_key, value=sql_value, shareholder=shareholder,
+                                investment=outbound, Type=None, searchName=None)
             qcc_conn.close()
 
     @retry(exceptions=True, max_retries=10)
-    def cspider(self, url, tags, search_key):
+    def cspider(self, url, tags, search_key, ids):
         headers = {}
         headers.update({"User-Agent": get_ua()})
         headers.update({"cookie": self.open_cookie()})
@@ -376,11 +375,15 @@ class QccSpider():
                 ak = self.qcc_item_dict.get(k)
                 if ak and v:
                     sql_key_list.append(ak)
-                    sql_value_list.append(v)
+                    sql_value_list.append(v.replace('"', '“').replace(',', '，'))
 
             sql_key = ','.join(sql_key_list)
             sql_value_list = ['"' + str(i) + '"' for i in sql_value_list]
             sql_value = ','.join(sql_value_list)
+            ilist = []
+            for i in range(len(sql_key_list)):
+                ilist.append(sql_key_list[i] + '=' + sql_value_list[i])
+            ilist = ','.join(ilist)
 
             """工商数据"""
             print('获取到工商数据:', keyid)
@@ -470,8 +473,9 @@ class QccSpider():
 
             if shareholder is None and outbound is None:
                 print(f'对外投资， 股东信息都为空，请确定!{url}')
-            qcc_conn.qcc_insert(key=sql_key, value=sql_value, shareholder=shareholder,
-                                investment=outbound, type=self.type, uuid=search_key)
+            print(ids)
+            qcc_conn.qcc_insert2(litem=ilist, ids=ids, shareholder=shareholder,
+                                 investment=outbound, Type=self.type, searchName=search_key)
             qcc_conn.close()
 
     def log(self):
@@ -684,7 +688,9 @@ class QccXls:
                                     database=self.db)
         self.cursor = self.conn.cursor()
 
-    def get_xls_data(self):
+    """央企+双百+省属企业名单合集"""
+
+    def get_xls_double(self):
         # 打开excel
         wb_list = []
         wb = xlrd.open_workbook('央企+双百+省属企业名单合集-1116.xls')
@@ -698,7 +704,7 @@ class QccXls:
 
     """AMC及AIC名单.xls"""
 
-    def get_xls_data2(self):
+    def get_xls_amc(self):
         # 打开excel
         wb_list = []
         wb_list1 = []
@@ -720,7 +726,7 @@ class QccXls:
 
     """发债主体代码"""
 
-    def get_xls_data3(self):
+    def get_xls_body(self):
         # 打开excel
         wb_list = []
         wb = xlrd.open_workbook('发债主体代码.xls')
@@ -736,8 +742,209 @@ class QccXls:
                     wb_list.append(data)
         return wb_list
 
-    """汽车类上市公司3"""
+    """汽车类上市公司：特力A ~ 大地电气"""
 
+    def get_xls_car(self):
+        # 打开excel
+        wb_list = []
+        # 打开excel
+        import csv
+        with open('./汽车类上市公司/name.csv', mode="w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.writer(f)
+            wb = xlrd.open_workbook('汽车类上市公司.xls')
+            # 按工作簿定位工作表
+            sheetname = ['Sheet1']
+            for name in sheetname:
+                sh = wb.sheet_by_name(name)
+                for i in range(sh.nrows):
+                    if i < 1:
+                        pass
+                    else:
+                        data = sh.row_values(i)[1]
+                        wb_list.append(data)
+        return wb_list
+
+    def xls_main(self):
+
+        num = 0
+        for double in set(self.get_xls_double()):
+            num += 1
+            print(f'央企+双百+省属企业名单合集({num}):', double)
+        num = 0
+        for amc in set(self.get_xls_amc()):
+            num += 1
+            print(f'AMC及AIC名单({num}):', amc)
+        num = 0
+        for bo in set(self.get_xls_body()):
+            num += 1
+            print(f'发债主体代码({num}):', bo)
+        num = 0
+        for car in set(self.get_xls_car()):
+            num += 1
+            print(f'汽车类上市公司({num}):', car)
+
+    def init_mysql(self):
+        redisConn = redis_conn()
+        redisName = 'qccMainCompany'
+        sqlTableName = 'buy_business_qccdata_new'
+        key = 'id,level,pid,pageurl,label,credit_code, name,legal_representative,registration_status,status,incorporation_date,registered_capital,paid_capital,organization_code,business_code,taxpayer_code,enterprise_type,business_term,taxpayer_qualification,personnel_size,insured_num,approval_date,area,organ,io_code,industry,english_name,address,business_scope,report_latest,type'
+        for i in range(4):
+            sql = 'select %s from buy_business_qccdata_copy1 where level=-1 and type="%s"' % (key, i)
+            self.cursor.execute(sql)
+            finds = self.cursor.fetchall()
+            for query in finds:
+                name = query[6]
+                ids = query[0]
+                level = query[1]
+                pid = query[2]
+                if ids == pid:
+                    pid = 'null'
+                    query[2] = None
+
+                try:
+                    redisbool = redisConn.find_data(field=redisName, value=name)
+                    if redisbool:
+                        print('*******************************')
+                        self.cursor.execute('select id, insertime from %s where name="%s"' % (sqlTableName, name))
+                        existFind = self.cursor.fetchone()
+                        print('已存在:', name, 'insertime: ', existFind[1])
+
+                        dataid = existFind[0]
+                        self.init_relation(i, dataid)
+                        print('数据源类型存储成功:', name)
+                        self.init_rel(ids, pid, nowid=dataid)
+                        print('###############################')
+
+                    else:
+                        if int(level) != 1:
+                            print('*******************************')
+                            pname = self.init_name('buy_business_qccdata_copy1', pid)[1]
+                            self.cursor.execute('select id from %s where name="%s"' % (sqlTableName, pname))
+                            existFind = self.cursor.fetchone()
+                            dataid = existFind[0]
+                            query = list(query)
+                            query[2] = dataid
+                            query = ['null' if i is None else '"' + str(i) + '"' for i in query]
+                            query = ','.join(query)
+                            sql = 'insert into %s (%s) values (%s)' % (sqlTableName, key, query)
+                            self.cursor.execute(sql)
+                            self.conn.commit()
+                            redisConn.set_add(redisName, value=name)
+                            self.init_relation(i, ids)
+                            print('插入主表成功:', name)
+                            self.init_rel(ids, dataid)
+                            print('###############################')
+                        else:
+                            print('*******************************')
+                            sql = 'insert into %s (%s) values (%s)' % (sqlTableName, key, query)
+                            self.cursor.execute(sql)
+                            self.conn.commit()
+                            redisConn.set_add(redisName, value=name)
+                            self.init_relation(i, ids)
+                            print('插入主表成功:', name)
+                            self.init_rel(ids, pid)
+
+                except Exception as e:
+                    print('Error_Redis: ', name, e)
+
+    def init_relation(self, eid, dataid):
+        """
+        :param eid: 类型
+        :param dataid: 关联id
+        :return:
+        """
+        if eid == dataid:
+            pass
+        else:
+            try:
+                enterprisetype = 'buy_business_qcc_enterprisetype_qccdata'
+                enterprisekey = 'enterprisetypeid, dataid'
+                enterprisevalue = '%s, %s' % (eid, dataid)
+                self.cursor.execute('insert into %s (%s) values (%s)' % (enterprisetype, enterprisekey, enterprisevalue))
+                self.conn.commit()
+            except:
+                pass
+
+    def init_rel(self, cid, pid, nowid=None):
+        try:
+            print(pid)
+            tableName = 'buy_business_qccdata_rel_new'
+            if pid == 'null':
+                pass
+            else:
+                if nowid:
+                    fon = self.init_name(tableName='buy_business_qccdata_copy1', id=pid)
+                    fonname = fon[1]
+                    self.cursor.execute('select * from %s where name="%s"' % ('buy_business_qccdata_new', fonname))
+                    findid = self.cursor.fetchone()[0]
+                    sql = 'insert %s (cid, pid) values ("%s","%s")' % (tableName, nowid, findid)
+                    self.cursor.execute(sql)
+                    self.conn.commit()
+                else:
+                    sql = 'insert %s (cid, pid) values ("%s","%s")' % (tableName, cid, pid)
+                    self.cursor.execute(sql)
+                    self.conn.commit()
+
+        except:
+            pass
+
+    def init_name(self, tableName, id):
+        """
+        :param tableName: 表名
+        :param id: 表id索引
+        :return: pid, name
+        """
+        sql = 'select pid, name from %s where id="%s"' % (tableName, id)
+        self.cursor.execute(sql)
+        finds = self.cursor.fetchone()
+        pid = finds[0]
+        name = finds[1]
+        return pid, name
+
+    def init_errordel(self):
+        tableName = 'buy_business_qccdata_new'
+        copyName = 'buy_business_qccdata_copy1'
+        relName = 'buy_business_qccdata_rel_new'
+        typeName = 'buy_business_qcc_enterprisetype_qccdata'
+        redisConn = redis_conn()
+        sql = 'select * from %s where level = -1 and type=0' % copyName
+        self.cursor.execute(sql)
+        finds = self.cursor.fetchall()
+        for item in finds:
+            ids = item[0]
+            name = item[7]
+            sql = 'select * from %s where name = "%s"' % (tableName, name)
+            finds = self.init_search(sql)
+            if finds:
+                pass
+                print('找到:', finds)
+            else:
+                print('不存在:', name)
+                refind = redisConn.find_data('qccMainCompany', name)
+                redisConn.del_data('qccMainCompany', name)
+                print(refind)
+
+            # relSql = 'delete from %s where cid = %s or pid = %s' % (relName, ids, ids)
+            # typeSql = 'delete from %s where dataid = %s' % (typeName, ids)
+            # print(self.init_del(tableName, ids))
+            # relData = self.init_search(relSql)
+            # typeData = self.init_search(typeSql)
+            # print(item)
+            # print('关系:', relData)
+            # print('类型:', typeData)
+
+    def init_search(self, sql):
+        self.cursor.execute(sql)
+        finds = self.cursor.fetchall()
+        return finds
+
+    def init_del(self, tableName, id):
+        sql = 'delete from %s where id = %s' %(tableName, id)
+        self.cursor.execute(sql)
+        self.conn.commit()
+        return 'del success TableName: %s  id: %s' % (tableName, id)
+
+    """汽车类上市公司3"""
     def get_xls_data4(self):
 
         # 打开excel
@@ -1064,6 +1271,7 @@ class QccXls:
         return res
 
     """数据补全(股东信息，对外投资)"""
+
     def get_data_completion(self, sonname=None, sonid=None, types=None, level=None):
         redisConn = redis_conn()
         getData = self.qccdata()
@@ -1090,20 +1298,19 @@ class QccXls:
         self.cursor = self.conn.cursor()
         q = QccSpider(type=type, level=level)
 
-        sql01 = f'select * from buy_business_qccdata where type={type} and level=0 and end=1 and pageurl is null'
+        sql01 = f'select * from buy_business_qccdata where type={type} and level={level} and end=1 and pageurl is null'
         self.cursor.execute(sql01)
         r1 = self.cursor.fetchall()
         for i in r1:
-            print(i)
-            name = i[8].replace('（', '(').replace('）', ')')
+            name = i[7].replace('（', '(').replace('）', ')')
             id = i[0]
             code = i[1]
-            q.start_request(search_key=name, id=id, code=code)
+            q.start_request(id=id, search_key=name, cspider=True)
 
     def up3(self, type, level):
         q = QccSpider(type=type, level=level)
-        sql01 = f'select * from buy_business_qccdata where id >= 53151 and id <= 53230 and pageurl is null'
-        # sql01 = f'select * from buy_business_qccdata where type={type} and level=-1 and end=1 and pageurl is null'
+        # sql01 = f'# select * from buy_business_qccdata where id >= 53151 and id <= 53230 and pageurl is null'
+        sql01 = f'select * from buy_business_qccdata where type={type} and level=-1 and end=1 and pageurl is null'
         self.cursor.execute(sql01)
         r1 = self.cursor.fetchall()
         for i in r1:
@@ -1116,15 +1323,13 @@ class QccXls:
 
 if __name__ == '__main__':
     print('''************请注意更新插入等级关系: item['level'] , type************''')
-    type = '2'
-    level = '0'
 
-    # x = QccXls().up3(type=type, level=level)
+    x = QccXls().init_mysql()
+    # x = QccXls().init_errordel()
     # x = QccXls().get_data_completion(sonname='广西上横高速公路有限公司', sonid='53186', types='1', level='-2')
-    x = QccXls().get_data_completion()
+    # x = QccXls().get_data_completion()
     # x = QccXls().get_data4()
     # x = QccXls().get_xls_data4()
     # q = QccSpider(type=type)
-    # for name in x:
-    #     print(name)
+
     # q.start_request
