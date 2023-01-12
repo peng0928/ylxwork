@@ -33,7 +33,8 @@ def getownershipstructuremix(keyno, tid):
     key1 = 'iLAgiWL4Ligk4i46Lkgigk4Billv6lL18Kik8kL8rWKALKAikN66L1vvWNiLLW1ALBlgvWlWlAiLAgiWL4Ligk4i46Lkgigk4Billv6lL18Kik8kL8rWKALKAikN66L1vvWNiLLW1ALBlgvWlWlA'
     # text1 = '/api/charts/getownershipstructuremix{"keyno":"%s","level":1}' % keyno
     text1 = '/api/datalist/touzilist?keyno=%s&pageindex=4{}' % keyno
-    text2 = '/api/datalist/touzilist?keyno=%s&pageindex=4pathString{}%s' % (keyno, tid)
+    text2 = '/api/datalist/touzilist?keyno=%s&pageindex=4pathString{}%s' % (
+        keyno, tid)
     k1 = hmac_demo(key1, text1)[8:28]
     k2 = hmac_demo(key1, text2)
     item[k1] = k2
@@ -44,7 +45,8 @@ def getequityinvestment(keyno, tid):
     item = {}
     key1 = 'iLAgi8QLN4kiBl4lKLg4lgv1lk4rlv4iLAgi8QLN4kiBl4lKLg4lgv1lk4rlv4'
     text1 = '/api/charts/getequityinvestment{"keyno":"%s"}' % keyno
-    text2 = '/api/charts/getequityinvestmentpathString{"keyno":"%s"}%s' % (keyno, tid)
+    text2 = '/api/charts/getequityinvestmentpathString{"keyno":"%s"}%s' % (
+        keyno, tid)
     k1 = hmac_demo(key1, text1)[8:28]
     k2 = hmac_demo(key1, text2)
     item[k1] = k2
@@ -68,8 +70,10 @@ def outbound(keyno: str = None, pageindex: str = None, tid: str = None, webkey=N
     ctx = execjs.compile(qcc_encode)
     e = f"/api/datalist/{webkey}?keyno={keyno}&pageindex={pageindex}"
     result = ctx.call('r', e)
-    text1 = '/api/datalist/%s?keyno=%s&pageindex=%s{}' % (webkey, keyno, pageindex)
-    text2 = '/api/datalist/%s?keyno=%s&pageindex=%spathString{}%s' % (webkey, keyno, pageindex, tid)
+    text1 = '/api/datalist/%s?keyno=%s&pageindex=%s{}' % (
+        webkey, keyno, pageindex)
+    text2 = '/api/datalist/%s?keyno=%s&pageindex=%spathString{}%s' % (
+        webkey, keyno, pageindex, tid)
     k1 = hmac_demo(result, text1)[8:28]
     k2 = hmac_demo(result, text2)
     qcc_dict[k1] = k2
@@ -87,21 +91,24 @@ def information(keyno: str = None, pageindex: str = None, tid: str = None, new=F
     :param tid: window.tid
     :return:
     """
+    pageindex = pageindex if pageindex else 1
     qcc_dict = {}
     new = '&type=ipopartners' if new else ''
     with open('qcchmac.js', 'r')as f:
         qcc_encode = f.read()
     ctx = execjs.compile(qcc_encode)
-    e = "/api/datalist/partner?issortasc=true&keyno=%s&pageindex=1&pagesize=50&sortfield=shouldcapi%s" % (keyno, new)
+    e = "/api/datalist/partner?issortasc=true&keyno=%s&pageindex=%s&pagesize=50&sortfield=shouldcapi%s" % (
+        keyno, pageindex, new)
     result = ctx.call('r', e)
-    text1 = "/api/datalist/partner?issortasc=true&keyno=%s&pageindex=1&pagesize=50&sortfield=shouldcapi%s{}" % (
-        keyno, new)
-    text2 = '/api/datalist/partner?issortasc=true&keyno=%s&pageindex=1&pagesize=50&sortfield=shouldcapi%spathString{}%s' % (
-        keyno, new, tid)
+    text1 = "/api/datalist/partner?issortasc=true&keyno=%s&pageindex=%s&pagesize=50&sortfield=shouldcapi%s{}" % (
+        keyno, pageindex, new)
+    text2 = '/api/datalist/partner?issortasc=true&keyno=%s&pageindex=%s&pagesize=50&sortfield=shouldcapi%spathString{}%s' % (
+        keyno, pageindex, new, tid)
     k1 = hmac_demo(result, text1)[8:28]
     k2 = hmac_demo(result, text2)
     qcc_dict[k1] = k2
     return qcc_dict
+
 
 def information2(keyno: str = None, pageindex: str = None, tid: str = None, new=False):
     """
@@ -111,15 +118,19 @@ def information2(keyno: str = None, pageindex: str = None, tid: str = None, new=
     :param tid: window.tid
     :return:
     """
+    pageindex = pageindex if pageindex else 1
     qcc_dict = {}
     new = '&type=ipopartner' if new else ''
     with open('qcchmac.js', 'r')as f:
         qcc_encode = f.read()
     ctx = execjs.compile(qcc_encode)
-    e = "/api/datalist/partner?issortasc=&keyno=%s&pageindex=1&pagesize=50&sortfield=" % keyno
+    e = "/api/datalist/partner?issortasc=&keyno=%s&pageindex=%s&pagesize=50&sortfield=" % (
+        keyno, pageindex)
     result = ctx.call('r', e)
-    text1 = "/api/datalist/partner?issortasc=&keyno=%s&pageindex=1&pagesize=50&sortfield={}" % keyno
-    text2 = '/api/datalist/partner?issortasc=&keyno=%s&pageindex=1&pagesize=50&sortfield=pathString{}%s' % (keyno, tid)
+    text1 = "/api/datalist/partner?issortasc=&keyno=%s&pageindex=%s&pagesize=50&sortfield={}" % (
+        keyno, pageindex)
+    text2 = '/api/datalist/partner?issortasc=&keyno=%s&pageindex=%s&pagesize=50&sortfield=pathString{}%s' % (
+        keyno, pageindex, tid)
 
     k1 = hmac_demo(result, text1)[8:28]
     k2 = hmac_demo(result, text2)
@@ -152,4 +163,5 @@ if __name__ == "__main__":
     # k2 = getownershipstructuremix(keyno, tid)
     # print(k1)
     # print(k2)
-    print(information2(keyno='fb6136509fb0ce219e9dd2ba1f395c68', tid='c7471078d8d101a605235f57d5887e4d'))
+    print(information2(keyno='fb6136509fb0ce219e9dd2ba1f395c68',
+          tid='c7471078d8d101a605235f57d5887e4d'))

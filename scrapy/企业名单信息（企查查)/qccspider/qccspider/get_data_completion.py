@@ -88,7 +88,7 @@ class QccSpider():
         return res
 
     """数据补全(股东信息，对外投资)"""
-    @retry(exceptions=True, max_retries=5)
+
     def get_data_completion(self, sonname=None, sonid=None, types=None, level=None):
         redisConn = redis_conn()
         getData = self.qccdata()
@@ -105,36 +105,40 @@ class QccSpider():
             shareholderBool = redisConn.find_data(
                 field='qcc_shareholderinformation_new', value=redisName)
             print(f'当前{num}:', pageurl)
-            if not investmentBool:
-                try:
-                    shareBool, investBool = self.mgsExist(pageurl)
-                except:
-                    raise ValueError('请求超时:', pageurl)
-                if shareBool:
-                    self.spider_investment(
-                        url=pageurl, ids=ids, redsi_name=redisName)
-                    time.sleep(2.5)
+            try:
+                if not investmentBool:
+                    try:
+                        shareBool, investBool = self.mgsExist(pageurl)
+                    except:
+                        raise ValueError('请求超时:', pageurl)
+                    if investBool:
+                        self.spider_investment(
+                            url=pageurl, ids=ids, redsi_name=redisName)
+                        time.sleep(2.5)
+                    else:
+                        print('对外投资不存在')
                 else:
-                    print('对外投资不存在')
-            else:
-                print('对外投资已存在')
+                    print('对外投资已存在')
 
-            if not shareholderBool:
-                try:
-                    shareBool, investBool = self.mgsExist(pageurl)
-                except:
-                    raise ValueError('请求超时:', pageurl)
-                if investBool:
-                    self.spider_shareholder(
-                        url=pageurl, ids=ids, redsi_name=redisName)
-                    time.sleep(2.5)
+                if not shareholderBool:
+                    try:
+                        shareBool, investBool = self.mgsExist(pageurl)
+                    except:
+                        raise ValueError('请求超时:', pageurl)
+                    if shareBool:
+                        self.spider_shareholder(
+                            url=pageurl, ids=ids, redsi_name=redisName)
+                        time.sleep(2.5)
+                    else:
+                        print('股东信息不存在')
                 else:
-                    print('股东信息不存在')
-            else:
-                print('股东信息已存在')
+                    print('股东信息已存在')
+            except:
+                print('错误：', name)
 
     @retry(exceptions=True, max_retries=10)
     def spider_shareholder(self, url, ids, redsi_name):
+        """获取股东信息数据"""
         qcc_conn = pymysql_connection()
         keyid = re.findall('firm/(.*?)\.html', url)
         keyid = keyid[0] if keyid else keyid
@@ -161,8 +165,9 @@ class QccSpider():
             qcc_conn.insert_shareholderinformation_new(
                 item=shareholder, insert_id=ids, redsi_name=redsi_name)
 
-    @retry(exceptions=True, max_retries=10)
+    @ retry(exceptions=True, max_retries=10)
     def spider_investment(self, url, ids, redsi_name):
+        """获取对外投资数据"""
         qcc_conn = pymysql_connection()
         keyid = re.findall('firm/(.*?)\.html', url)
         keyid = keyid[0] if keyid else keyid
@@ -183,13 +188,13 @@ class QccSpider():
         #                     investment=outbound, type=self.type, uuid=search_key)
         # qcc_conn.close()
 
-    @retry(exceptions=True, max_retries=10)
+    @ retry(exceptions=True, max_retries=10)
     def mgsExist(self, url):
         headers = {}
         headers.update({"User-Agent": get_ua()})
         headers.update({"cookie": self.open_cookie()})
         response = requests.get(url, headers=headers, proxies={
-                                'https': 'tps163.kdlapi.com:15818'}, timeout=3)
+            'https': 'tps163.kdlapi.com:15818'}, timeout=3)
         resp = etree.HTML(response.text)
         if '公司不存在' in response.text:
             raise ValueError(f'公司不存在:{url}')
@@ -287,8 +292,71 @@ class QccSpider():
         try:
             datas = response.json().get('data')
             if datas:
+                pagesize = int(response.json().get('pageInfo').get('pageSize'))
+                page = math.ceil(response.json().get(
+                    'pageInfo').get('total') / pagesize)
+                page = int(page)
                 print(f'正在获取股东信息:{code}, 数量:',
                       response.json().get('pageInfo').get('total'))
+                for qdata in datas:
+                    item_dict = {}
+                    StockName = qdata.get('StockName', '-')  # 股东及出资信息
+                    ShareType = qdata.get('ShareType', '-')  # 股份类型
+                    StockPercent = qdata.get('StockPercent', '-')  # 持股比例
+                    ShouldCapi = qdata.get('TotalShouldAmount', '-')  # 持股数(股)
+                    RegistCapi = qdata.get('RegistCapi', '-')  # 认缴出资额(万元)
+                    ShoudDate = qdata.get('ShoudDate', '-')  # 认缴出资日期
+                    ShoudDate = ShoudDate if ShoudDate else '-'
+                    ShoudDate = ShoudDate.split(
+                        ',')[-1] if ',' in ShoudDate else ShoudDate
+                    FinalBenefitPercent = qdata.get(
+                        'FinalBenefitPercent', '-')  # 最终受益股份
+                    InDate = qdata.get('InDate', '-')  # 首次持股日期
+                    Name = qdata.get('Product')  # 关联产品/机构
+                    ProductName = Name.get(
+                        'Name', '-') if Name else '-'  # 关联产品/机构
+                    item_dict['StockName'] = StockName
+                    item_dict['ShareType'] = ShareType
+                    item_dict['StockPercent'] = StockPercent
+                    item_dict['ShouldCapi'] = ShouldCapi
+                    item_dict['RegistCapi'] = RegistCapi
+                    item_dict['ShoudDate'] = ShoudDate
+                    item_dict['FinalBenefitPercent'] = FinalBenefitPercent
+                    item_dict['InDate'] = InDate
+                    item_dict['ProductName'] = ProductName
+                    item_list.append(item_dict)
+
+                if page > 1:
+                    for i in range(2, page + 1):
+                        time.sleep(1)
+                        print(f'正在抓取第{i}页.')
+                        data = re.sub('pageIndex=\d', f'pageIndex={i}', data)
+                        getshareholder = self.getshareholder2(
+                            url, data, keyid, new, type, pageindex=i
+                        )
+                        for k in getshareholder:
+                            item_list.append(k)
+                        time.sleep(1)
+                return item_list
+        except Exception as e:
+            if str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
+                print('股东信息获取失败:', code, e)
+                input("\033[1;32m请验证账号\033[0m")
+                raise ValueError("请验证账号")
+
+    @retry(delay=2, exceptions=True, max_retries=5)
+    def getshareholder2(self, url, data, keyid, new, type, pageindex):
+        getcookie = self.get_hmac(
+            type=type, keyno=keyid, new=new, pageindex=pageindex)
+        header = copy.deepcopy(self.headers_data)
+        header.update(getcookie)
+        item_list = []
+        response = requests.get(url=url, headers=header, params=data)
+        code = response.status_code
+        try:
+            datas = response.json().get('data')
+            if datas:
+
                 for qdata in datas:
                     item_dict = {}
                     StockName = qdata.get('StockName', '-')  # 股东及出资信息

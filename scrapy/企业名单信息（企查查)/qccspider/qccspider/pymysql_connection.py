@@ -1,4 +1,5 @@
-import pymysql, uuid
+import pymysql
+import uuid
 from redis_conn import redis_conn
 
 
@@ -18,6 +19,7 @@ class pymysql_connection():
         self.conn_redis = redis_conn()
 
     """第一次数据爬取"""
+
     def qcc_insert(self, key, value, shareholder=None, investment=None, Type=None, searchName=None):
         """
         :param key: 企业工商信息字段
@@ -33,11 +35,13 @@ class pymysql_connection():
             qccdata_table1 = 'buy_business_qccdata'  # 企业名单信息
             if key and value:
                 redis_dataname = 'qcc_data'
-                findbool = self.conn_redis.find_data(field=redis_dataname, value=searchName)
+                findbool = self.conn_redis.find_data(
+                    field=redis_dataname, value=searchName)
                 if findbool:
                     print('工商数据已存在:', findbool)
                 else:
-                    data_insert_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key, value)
+                    data_insert_sql = 'insert into %s (%s) values (%s)' % (
+                        qccdata_table1, key, value)
                     self.cursor.execute(data_insert_sql)
                     insert_id = self.conn.insert_id()
                     print(insert_id)
@@ -90,13 +94,15 @@ class pymysql_connection():
             print(e)
 
     """根据数据库向下爬取"""
+
     def qcc_insert2(self, litem, ids=None, shareholder=None, investment=None, Type=None, searchName=None):
         insert_id = ids
         global investment_id
         try:
             qccdata_table1 = 'buy_business_qccdata'  # 企业名单信息
             if litem:
-                data_insert_sql2 = 'UPDATE %s set %s where id=%s' % (qccdata_table1, litem, ids)
+                data_insert_sql2 = 'UPDATE %s set %s where id=%s' % (
+                    qccdata_table1, litem, ids)
                 self.cursor.execute(data_insert_sql2)
                 self.conn.commit()
                 self.conn_redis.set_add(field='qcc_qccdata', value=searchName)
@@ -109,7 +115,8 @@ class pymysql_connection():
             if shareholder:
                 redsi_name = str(insert_id) + '_' + searchName
                 print('\033[1;32m正在插入股东信息:\033[0m')
-                self.insert_shareholderinformation_new(item=shareholder, insert_id=insert_id, redsi_name=redsi_name)
+                self.insert_shareholderinformation_new(
+                    item=shareholder, insert_id=insert_id, redsi_name=redsi_name)
                 print('完成插入父公司股东信息')
             else:
                 print('股东信息 不存在')
@@ -123,19 +130,21 @@ class pymysql_connection():
                 if findbool:
                     print('对外投资信息已存在:', redsi_name)
                 else:
-                    self.insert_qcc_investment_new(item=investment, insert_id=insert_id, redsi_name=redsi_name)
+                    self.insert_qcc_investment_new(
+                        item=investment, insert_id=insert_id, redsi_name=redsi_name)
                     for l in investment:
                         StockName = l.get('StockName')
                         """子公司"""
                         key1 = 'name, pid,  type'
                         value1 = f'"{StockName}"' + f',"{insert_id}", "{Type}"'
-                        shareholder_sql = 'insert into %s (%s) values (%s)' % (qccdata_table1, key1, value1)
+                        shareholder_sql = 'insert into %s (%s) values (%s)' % (
+                            qccdata_table1, key1, value1)
                         self.cursor.execute(shareholder_sql)
                         shareholderid = self.conn.insert_id()
                         self.conn.commit()
                         """插入关系"""
                         self.cursor.execute('insert into buy_business_qccdata_rel (cid, pid) values ("%s", "%s")' % (
-                                shareholderid, insert_id))
+                            shareholderid, insert_id))
                         self.conn.commit()
                     print('完成插入')
             else:
@@ -153,16 +162,20 @@ class pymysql_connection():
             print('股东信息已存在:', redsi_name)
         else:
             for l in item:
-                str_k = ''
-                str_v = ''
-                for k, v in l.items():
-                    str_k += f"{k}" + ','
-                    str_v += f'"{v}"' + ','
-                str_k += 'cid'
-                str_v += f'{insert_id}'
-                investment_sql3 = 'insert into %s (%s) values (%s)' % (tablename, str_k, str_v)
-                self.cursor.execute(investment_sql3)
-                self.conn.commit()
+                try:
+                    str_k = ''
+                    str_v = ''
+                    for k, v in l.items():
+                        str_k += f"{k}" + ','
+                        str_v += f'"{v}"' + ','
+                    str_k += 'cid'
+                    str_v += f'{insert_id}'
+                    investment_sql3 = 'insert into %s (%s) values (%s)' % (
+                        tablename, str_k, str_v)
+                    self.cursor.execute(investment_sql3)
+                    self.conn.commit()
+                except Exception as e:
+                    print('股东信息:', e)
             redisConn.set_add(field=field, value=redsi_name)
             print('股东信息Redis插入成功:', redsi_name)
 
@@ -181,7 +194,8 @@ class pymysql_connection():
                     str_v += f'"{v}"' + ','
                 str_k += 'cid'
                 str_v += f'{insert_id}'
-                investment_sql3 = 'insert into %s (%s) values (%s)' % (tablename, str_k, str_v)
+                investment_sql3 = 'insert into %s (%s) values (%s)' % (
+                    tablename, str_k, str_v)
                 self.cursor.execute(investment_sql3)
                 self.conn.commit()
             redisConn.set_add(field='qcc_investment_new', value=redsi_name)
