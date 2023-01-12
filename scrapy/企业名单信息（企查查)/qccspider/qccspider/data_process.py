@@ -107,7 +107,8 @@ class Xpath():
 
 # 取出时间 data->时间戳，文本
 def process_date(data=None, rule=None):
-    data = data.replace('年', '-').replace('月', '-').replace('日', ' ').replace('/', '-').replace('.', '-')
+    data = data.replace('年', '-').replace('月', '-').replace('日',
+                                                            ' ').replace('/', '-').replace('.', '-')
     if len(data) == 0:
         return None
 
@@ -168,7 +169,8 @@ def cnnum2albnum(s):
     s = s.replace("拾", "0")
     s = s.replace("万", "0000")
     s = s.replace("千", "000")
-    s = s.replace('年', '-').replace('月', '-').replace('日', '').replace('/', '-').strip()
+    s = s.replace('年', '-').replace('月', '-').replace('日',
+                                                      '').replace('/', '-').strip()
     return s
 
 
@@ -253,7 +255,7 @@ def chinese2digits(value):
     return total
 
 
-##时间戳->时间
+# 时间戳->时间
 def process_timestamp(t=None):
     if len(str(t)) != 10:
         t = str(t)[:10]
@@ -264,7 +266,7 @@ def process_timestamp(t=None):
     return formatTime
 
 
-##时间->时间戳
+# 时间->时间戳
 def timestamp(t=None, rule="%Y-%m-%d"):
     s_t = time.strptime(t, rule)
     mkt = int(time.mktime(s_t))
@@ -287,7 +289,8 @@ def process_text(obj, character=True, is_list=True):
             if item.isspace():
                 pass
             elif '\n' in item or '\t' in item:
-                item = item.replace('\n', '').replace('\t', '').replace('\r', '').replace(' ', '')
+                item = item.replace('\n', '').replace(
+                    '\t', '').replace('\r', '').replace(' ', '')
                 if len(item) == 0:
                     pass
                 else:
@@ -310,7 +313,8 @@ def process_text(obj, character=True, is_list=True):
 
 
 def replace(str):
-    result = re.sub(r'(\\u[a-zA-Z0-9]{4})', lambda x: x.group(1).encode("utf-8").decode("unicode-escape"), str)
+    result = re.sub(r'(\\u[a-zA-Z0-9]{4})', lambda x: x.group(
+        1).encode("utf-8").decode("unicode-escape"), str)
     result = re.sub(r'(\\r|\\n|\\t|\xa0)', lambda x: '', result)
     return result
 
@@ -411,7 +415,8 @@ def req_proxies():
 def get_datetime_now(rule='%Y-%m-%d', reduce_year=0, reduce_months=0):
     daytime = datetime.datetime.now()
     if reduce_year or reduce_months:
-        daytime = ((daytime - relativedelta(years=reduce_year, months=reduce_months)).strftime(rule))
+        daytime = ((daytime - relativedelta(years=reduce_year,
+                   months=reduce_months)).strftime(rule))
     else:
         daytime = daytime.strftime(rule)
     return daytime
@@ -438,7 +443,8 @@ def encrypt_md5(key=None):
 def weekday_1(start_date=None, Y=False, M=False, D=False):
     import pandas as pd
     from datetime import datetime
-    e = pd.bdate_range(start_date, datetime.now().strftime('%Y-%m-%d'), freq='b')
+    e = pd.bdate_range(
+        start_date, datetime.now().strftime('%Y-%m-%d'), freq='b')
     if Y is True:
         e = [i.strftime('%Y') for i in e]
     elif M is True:
@@ -452,7 +458,8 @@ def weekday_1(start_date=None, Y=False, M=False, D=False):
 
 
 def timechange(start_date):
-    middle = datetime.datetime.strptime(start_date.replace('/', '-'), '%Y-%m-%d')
+    middle = datetime.datetime.strptime(
+        start_date.replace('/', '-'), '%Y-%m-%d')
     end_date = datetime.datetime.strftime(middle, '%Y-%m-%d')
     return end_date
 
@@ -520,3 +527,25 @@ class DataClean:
     @staticmethod
     def StripAll(text: str = None):
         return text.replace(' ', '')
+
+
+class Print:
+    def __init__(self, *args):
+        args = [str(i) for i in args]
+        self.msg = ''.join(args)
+
+    def red(self):
+        print("\033[31m" + self.msg + "033[0m")
+        return True
+
+    def green(self):
+        print("\033[32m" + self.msg + "033[0m")
+        return True
+
+    def yellow(self):
+        print("\033[33m" + self.msg + "033[0m")
+        return True
+
+    def blue(self):
+        print("\033[34m" + self.msg + "033[0m")
+        return True

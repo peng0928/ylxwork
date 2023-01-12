@@ -4,10 +4,9 @@ import redis
 class redis_conn():
     def __init__(self, db=8):
         redis_pool = redis.ConnectionPool(host='10.0.2.248', port=6379, db=db)
-        self.field = 'qcc_data'
         self.redis_conn = redis.Redis(connection_pool=redis_pool)
 
-    ##########断点续爬###########
+    ########## 断点续爬###########
     def set_add(self, field=None, value=None):
         self.redis_conn.sadd(field, value)
 
@@ -27,7 +26,6 @@ class redis_conn():
 if __name__ == '__main__':
     r = redis_conn()
     l = '苏州资产管理有限公司'
-
 
     # s = r.find_data(value='http://a.xjbt.gov.cn/TPFront/infodetail/?infoid=b543edb3-7ebc-41bb-8610-23dced1c0c75&CategoryNum=004001002')
     r.del_data(field='qcc', value=l)

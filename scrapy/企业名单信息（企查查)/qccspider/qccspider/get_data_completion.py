@@ -7,18 +7,16 @@ import json
 import logging
 import os
 import re
-import opencc
 import requests
-import xlrd
 from lxml import etree
 from decorator_penr import *
 from qcc_hmac import *
 from useragent import *
-from qccspider.pymysql_connection import *
+from pymysql_connection import *
 from redis_conn import *
 from data_process import *
 from qcc_outspider import outspider
-from qccspider.config import *
+from config import *
 
 
 class QccSpider():
@@ -80,42 +78,60 @@ class QccSpider():
 
         self.redis_conn = redis_conn()
 
-
     def qccdata(self, id=None):
         if id:
             sql = 'select * from buy_business_qccdata where id=%s' % id
         else:
-            sql = 'select id, pageurl, name from buy_business_qccdata where pageurl is not null'
+            sql = 'select id, pageurl, name from buy_business_qccdata_new where pageurl is not null and level = 1'
         self.cursor.execute(sql)
         res = self.cursor.fetchall()
         return res
 
     """数据补全(股东信息，对外投资)"""
+    @retry(exceptions=True, max_retries=5)
     def get_data_completion(self, sonname=None, sonid=None, types=None, level=None):
         redisConn = redis_conn()
         getData = self.qccdata()
+        num = 0
         for item in getData:
+            num += 1
             ids = item[0]
             pageurl = item[1]
             name = item[2]
             name = name if name else ''
             redisName = str(ids) + '_' + name
-            investmentBool = redisConn.find_data(field='qcc_investment_new', value=redisName)
-            shareholderBool = redisConn.find_data(field='qcc_shareholderinformation_new', value=redisName)
-            print('当前:', pageurl)
+            investmentBool = redisConn.find_data(
+                field='qcc_investment_new', value=redisName)
+            shareholderBool = redisConn.find_data(
+                field='qcc_shareholderinformation_new', value=redisName)
+            print(f'当前{num}:', pageurl)
             if not investmentBool:
-                self.spider_investment(url=pageurl, ids=ids, redsi_name=redisName)
-                time.sleep(2)
+                try:
+                    shareBool, investBool = self.mgsExist(pageurl)
+                except:
+                    raise ValueError('请求超时:', pageurl)
+                if shareBool:
+                    self.spider_investment(
+                        url=pageurl, ids=ids, redsi_name=redisName)
+                    time.sleep(2.5)
+                else:
+                    print('对外投资不存在')
             else:
                 print('对外投资已存在')
 
             if not shareholderBool:
-                self.spider_shareholder(url=pageurl, ids=ids, redsi_name=redisName)
-                time.sleep(2)
+                try:
+                    shareBool, investBool = self.mgsExist(pageurl)
+                except:
+                    raise ValueError('请求超时:', pageurl)
+                if investBool:
+                    self.spider_shareholder(
+                        url=pageurl, ids=ids, redsi_name=redisName)
+                    time.sleep(2.5)
+                else:
+                    print('股东信息不存在')
             else:
                 print('股东信息已存在')
-
-
 
     @retry(exceptions=True, max_retries=10)
     def spider_shareholder(self, url, ids, redsi_name):
@@ -142,8 +158,8 @@ class QccSpider():
         if shareholder is None:
             print('股东信息不存在')
         else:
-            qcc_conn.insert_shareholderinformation_new(item=shareholder, insert_id=ids, redsi_name=redsi_name)
-
+            qcc_conn.insert_shareholderinformation_new(
+                item=shareholder, insert_id=ids, redsi_name=redsi_name)
 
     @retry(exceptions=True, max_retries=10)
     def spider_investment(self, url, ids, redsi_name):
@@ -158,7 +174,8 @@ class QccSpider():
             new=True,
         )
         if investment:
-            qcc_conn.insert_qcc_investment_new(item=investment, insert_id=ids, redsi_name=redsi_name)
+            qcc_conn.insert_qcc_investment_new(
+                item=investment, insert_id=ids, redsi_name=redsi_name)
         else:
             print('对外投资为空')
 
@@ -166,13 +183,49 @@ class QccSpider():
         #                     investment=outbound, type=self.type, uuid=search_key)
         # qcc_conn.close()
 
+    @retry(exceptions=True, max_retries=10)
+    def mgsExist(self, url):
+        headers = {}
+        headers.update({"User-Agent": get_ua()})
+        headers.update({"cookie": self.open_cookie()})
+        response = requests.get(url, headers=headers, proxies={
+                                'https': 'tps163.kdlapi.com:15818'}, timeout=3)
+        resp = etree.HTML(response.text)
+        if '公司不存在' in response.text:
+            raise ValueError(f'公司不存在:{url}')
+
+        elif str(response.status_code)[0] != '2' or '<title>会员登录' in response.text or '<title>405' in response.text:
+            raise ValueError('异常访问,访问失败===>>>', url)
+
+        else:
+            shareholderBool = False
+            investmentBool = False
+            datatab = resp.xpath(datatabXpath)
+            for query in datatab:
+                query = query.strip()
+                if '股东信息' in query:
+                    shareholderNum = re.findall('\d+', query)
+                    shareholderNum = int(
+                        shareholderNum[0]) if shareholderNum else None
+                    if shareholderNum and shareholderNum > 0:
+                        shareholderBool = True
+
+                if '对外投资' in query:
+                    investmentNum = re.findall('\d+', query)
+                    investmentNum = int(
+                        investmentNum[0]) if investmentNum else None
+                    if investmentNum and investmentNum > 0:
+                        investmentBool = True
+            return shareholderBool, investmentBool
+
     def log(self):
         os.makedirs('./loging', exist_ok=True)
         logger = logging.getLogger(__name__)
         logger.setLevel(level=logging.INFO)
         handler = logging.FileHandler("./loging/log.txt")
         handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return logger
@@ -188,7 +241,8 @@ class QccSpider():
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"
         }
-        response = requests.get(url=url, headers=headers, proxies={'https': 'tps163.kdlapi.com:15818'}, timeout=1)
+        response = requests.get(url=url, headers=headers, proxies={
+                                'https': 'tps163.kdlapi.com:15818'}, timeout=1)
         Set_Cookie = response.headers.get('Set-Cookie')
         get_keys = re.findall('(acw_tc|QCCSESSID)(.*?);', Set_Cookie)
         cookies = [''.join(i) for i in get_keys]
@@ -214,7 +268,7 @@ class QccSpider():
         self.i += 1
         return r.get(type)
 
-    def get_hmac(self, type=0, keyno=None, tid='c7471078d8d101a605235f57d5887e4d', new=None, pageindex=None):
+    def get_hmac(self, type=0, keyno=None, tid=TID, new=None, pageindex=None):
         """
         :param keyno: 公司唯一标识：b8d99d133f16f34f30f7224145d8ec6f(https://www.qcc.com/firm/b8d99d133f16f34f30f7224145d8ec6f.html)
         :param tid: window.tid
@@ -233,7 +287,8 @@ class QccSpider():
         try:
             datas = response.json().get('data')
             if datas:
-                print(f'正在获取股东信息:{code}, 数量:', response.json().get('pageInfo').get('total'))
+                print(f'正在获取股东信息:{code}, 数量:',
+                      response.json().get('pageInfo').get('total'))
                 for qdata in datas:
                     item_dict = {}
                     StockName = qdata.get('StockName', '-')  # 股东及出资信息
@@ -243,11 +298,14 @@ class QccSpider():
                     RegistCapi = qdata.get('RegistCapi', '-')  # 认缴出资额(万元)
                     ShoudDate = qdata.get('ShoudDate', '-')  # 认缴出资日期
                     ShoudDate = ShoudDate if ShoudDate else '-'
-                    ShoudDate = ShoudDate.split(',')[-1] if ',' in ShoudDate else ShoudDate
-                    FinalBenefitPercent = qdata.get('FinalBenefitPercent', '-')  # 最终受益股份
+                    ShoudDate = ShoudDate.split(
+                        ',')[-1] if ',' in ShoudDate else ShoudDate
+                    FinalBenefitPercent = qdata.get(
+                        'FinalBenefitPercent', '-')  # 最终受益股份
                     InDate = qdata.get('InDate', '-')  # 首次持股日期
                     Name = qdata.get('Product')  # 关联产品/机构
-                    ProductName = Name.get('Name', '-') if Name else '-'  # 关联产品/机构
+                    ProductName = Name.get(
+                        'Name', '-') if Name else '-'  # 关联产品/机构
                     item_dict['StockName'] = StockName
                     item_dict['ShareType'] = ShareType
                     item_dict['StockPercent'] = StockPercent
@@ -277,7 +335,8 @@ class QccSpider():
         try:
             datas = response.json().get('data')
             if datas:
-                page = math.ceil(response.json().get('pageInfo').get('total') / 10)
+                page = math.ceil(response.json().get(
+                    'pageInfo').get('total') / 10)
                 page = int(page)
                 print(f'正在获取对外投资信息:{code}, 页数:', page)
                 for qdata in datas:
@@ -286,16 +345,18 @@ class QccSpider():
                     Status = qdata.get('Status', '-')  # 状态
                     FundedRatio = qdata.get('FundedRatio', '-')  # 持股比例
                     ShouldCapi = qdata.get('ShouldCapi', '-')  # 认缴出资额/持股数
-                    ShouldDate = qdata.get('ShouldDate', '-')  # 认缴出资日期
+                    StartDate = qdata.get('StartDate', '-')  # 成立日期
                     ProvinceName = qdata.get('ProvinceName', '-')  # 所属省份
                     IndustryItem = qdata.get('IndustryItem')  # 所属行业
-                    Industry = IndustryItem.get('Industry') if IndustryItem else '-'  # 所属行业
+                    Industry = IndustryItem.get(
+                        'Industry') if IndustryItem else '-'  # 所属行业
                     Product = qdata.get('Product')  # 关联产品/机构
-                    ProductName = Product.get('Name') if Product else '-'  # 关联产品/机构
+                    ProductName = Product.get(
+                        'Name') if Product else '-'  # 关联产品/机构
                     item_dict['Status'] = Status
                     item_dict['FundedRatio'] = FundedRatio
                     item_dict['ShouldCapi'] = ShouldCapi
-                    item_dict['ShouldDate'] = ShouldDate
+                    item_dict['StartDate'] = StartDate
                     item_dict['ProvinceName'] = ProvinceName
                     item_dict['Industry'] = Industry
                     item_dict['ProductName'] = ProductName
@@ -305,7 +366,6 @@ class QccSpider():
                 if page > 1:
                     for i in range(2, page + 1):
                         time.sleep(1)
-
                         print(f'正在抓取第{i}页.')
                         outbound = self.getoutbound2(
                             url='https://www.qcc.com/api/datalist/touzilist',
@@ -344,16 +404,18 @@ class QccSpider():
                     Status = qdata.get('Status')  # 状态
                     FundedRatio = qdata.get('FundedRatio')  # 持股比例
                     ShouldCapi = qdata.get('ShouldCapi')  # 认缴出资额/持股数
-                    ShouldDate = qdata.get('ShouldDate')  # 认缴出资日期
+                    StartDate = qdata.get('StartDate')  # 成立日期
                     ProvinceName = qdata.get('ProvinceName')  # 所属省份
                     IndustryItem = qdata.get('IndustryItem')  # 所属行业
-                    Industry = IndustryItem.get('Industry') if IndustryItem else '-'  # 所属行业
+                    Industry = IndustryItem.get(
+                        'Industry') if IndustryItem else '-'  # 所属行业
                     Product = qdata.get('Product')  # 关联产品/机构
-                    ProductName = Product.get('Name') if Product else '-'  # 关联产品/机构
+                    ProductName = Product.get(
+                        'Name') if Product else '-'  # 关联产品/机构
                     item_dict['Status'] = Status
                     item_dict['FundedRatio'] = FundedRatio
                     item_dict['ShouldCapi'] = ShouldCapi
-                    item_dict['ShouldDate'] = ShouldDate
+                    item_dict['StartDate'] = StartDate
                     item_dict['ProvinceName'] = ProvinceName
                     item_dict['Industry'] = Industry
                     item_dict['ProductName'] = ProductName
@@ -365,7 +427,6 @@ class QccSpider():
                 print('对外投资失败:', code, e)
                 input("\033[1;33m请验证账号\033[0m")
                 raise ValueError("请验证账号")
-
 
 
 if __name__ == '__main__':
